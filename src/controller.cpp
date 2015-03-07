@@ -12,12 +12,10 @@
 
 int main(int argc, char **argv)
 {
-  double Kp=0.0;
-  double Ki=0.0;
-  double Kd=0.0;
-  double rate= 1.0; //in Hz.
+  // Get input from the command line
+  float Kp, Ki, Kd, rate; //Rate in Hz.
 
-  get_user_input(Kp,Ki,Kd,rate);
+  check_user_input(argc,argv,Kp,Ki,Kd,rate);
 
   // Initialize ROS stuff
   ros::init(argc, argv, "controller");
@@ -62,12 +60,15 @@ void chatterCallback(const pid::plant_msg& msg)
   // publish it
 }
 
-void get_user_input(double& Kp, double& Ki, double& Kd, double& rate)
+void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate)
 {
-  cout<<"Enter the proportional gain, Kp: "<<endl;
-  if ( !(cin >> Kp) )
+  sscanf(argv[1],"%f",&Kp); // Read Kp
+  cout<<"Kp: "<<Kp<<endl;
+
+  cout<<"Number of cmdline arguments: "<<argc<<endl;
+  if ( argc< 5)
   {
-    ROS_ERROR("Invalid input.");
+    ROS_ERROR("Not enough input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate.");
     exit(1);
   }
 
