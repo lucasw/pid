@@ -14,20 +14,22 @@ int main(int argc, char **argv)
 {
   // Get input from the command line
   float Kp, Ki, Kd, rate; //Rate in Hz.
+  string topic_from_controller, topic_from_plant, node_name;
 
-  check_user_input(argc,argv,Kp,Ki,Kd,rate);
+  check_user_input(argc,argv, Kp,Ki,Kd, rate, topic_from_controller, topic_from_plant, node_name);
 
   // Initialize ROS stuff
-  ros::init(argc, argv, "controller");
-  ros::NodeHandle controller_node;
+  ros::init(argc, argv, node_name);
+  ros::NodeHandle node;
   pid::controller_msg  u_msg;
+  cout<<rate<<endl;
   ros::Rate loop_rate(rate); // Control frequency in Hz
 
   // Publish on "control_effort" topic
-  ros::Publisher chatter_pub = controller_node.advertise<pid::controller_msg>("control_effort", 1);
+  ros::Publisher chatter_pub = node.advertise<pid::controller_msg>(topic_from_controller, 1);
 
   // Subscribe to "state" topic
-  ros::Subscriber sub = controller_node.subscribe("state", 1, chatterCallback );
+  ros::Subscriber sub = node.subscribe(topic_from_plant, 1, chatterCallback );
 
   // MAIN LOOP
   while( ros::ok() )
@@ -45,7 +47,7 @@ int main(int argc, char **argv)
 
 void chatterCallback(const pid::plant_msg& msg)
 {
-  // Translate a message from the plant    
+  ROS_INFO("I heard: %f", msg.x[0]);
 
   // calculate error
 
@@ -60,36 +62,36 @@ void chatterCallback(const pid::plant_msg& msg)
   // publish it
 }
 
-void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate)
+void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate, string& topic_from_controller, string& topic_from_plant, string& node_name)
 {
+  if ( argc<5 || argc>8 )
+  {
+    ROS_ERROR("Incorrect input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate. Custom topic names and a node name are optional.");
+    ROS_ERROR("Example: rosrun pid controller 1.1 2.2 3.3 100 topic_from_controller topic_from_plant pid_node");
+    exit(1);
+  }
+
   sscanf(argv[1],"%f",&Kp); // Read Kp
-  cout<<"Kp: "<<Kp<<endl;
+  sscanf(argv[2],"%f",&Ki);
+  sscanf(argv[3],"%f",&Kd);
+  sscanf(argv[4],"%f",&rate);
 
-  cout<<"Number of cmdline arguments: "<<argc<<endl;
-  if ( argc< 5)
+  if (argc==8)
   {
-    ROS_ERROR("Not enough input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate.");
-    exit(1);
+    topic_from_controller = string(argv[5]);
+    topic_from_plant = string(argv[6]);
+    node_name = string(argv[7]);
+  }
+  else
+  {
+    topic_from_controller = "control_effort";
+    topic_from_plant = "state";
+    node_name = "pid_node";
   }
 
-  cout<<"Enter the integral gain, Ki: "<<endl;
-  if ( !(cin >> Ki) )
+  if ( rate <= 0 )
   {
-    ROS_ERROR("Invalid input.");
-    exit(1);
-  }
-
-  cout<<"Enter the derivative gain, Kd: "<<endl;
-  if ( !(cin >> Kd) )
-  {
-    ROS_ERROR("Invalid input.");
-    exit(1);
-  }
-
-  cout<<"Enter the loop rate: "<<endl;
-  if ( !(cin >> rate) )
-  {
-    ROS_ERROR("Invalid input.");
+    ROS_ERROR("Enter a positive value for the loop rate.");
     exit(1);
   }
 
