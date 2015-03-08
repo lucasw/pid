@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>pid</name>
-  <version>0.0.0</version>
+  <version>0.0.1</version>
   <description>A PID control package.</description>
 
   <maintainer email="andyz@utexas.edu">Andy Zelenak</maintainer>
