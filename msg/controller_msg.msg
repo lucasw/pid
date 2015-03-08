@@ -1,1 +1,1 @@
-float64[2] u
+float64 u
