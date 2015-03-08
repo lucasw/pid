@@ -125,5 +125,9 @@ void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, f
     exit(1);
   }
 
-  cout<<"Kp: "<<Kp<<",  Ki: "<<Ki<<",  Kd: "<<Kd<<",  Loop rate [Hz]: "<<rate<<",  LPF cutoff [Hz]: "<<cutoff_frequency<<endl;
+  cout<<"Kp: "<<Kp<<",  Ki: "<<Ki<<",  Kd: "<<Kd<<",  Loop rate [Hz]: "<<rate<<endl;
+  if ( cutoff_frequency== -1)
+    cout<<"LPF cutoff frequency: 1/4 of sampling rate"<<endl;
+  else
+    cout<<"LPF cutoff frequency: "<<cutoff_frequency<<endl;
 }
