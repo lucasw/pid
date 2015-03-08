@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     ros::spinOnce();
 
     // Publish the stabilizing control effort
-    cout<< "Publishing: "<< u_msg.u<<endl;
+    //cout<< "Published control effort: "<< u_msg.u<<endl;
     chatter_pub.publish(u_msg);
 
     loop_rate.sleep();
