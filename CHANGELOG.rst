@@ -2,6 +2,9 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.0.1 (2015-03-08)
 ------------------
 * Fixing various minor bugs related to user input.

@@ -2,7 +2,7 @@
 <package>
   <name>pid</name>
   <version>0.0.1</version>
-  <description>A PID control package.</description>
+  <description>Launch a PID control node.</description>
 
   <maintainer email="andyz@utexas.edu">Andy Zelenak</maintainer>
 
