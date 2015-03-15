@@ -107,14 +107,22 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 ## Declare a cpp executable
 # add_executable(pid_node src/pid_node.cpp)
 
+add_executable(controller src/controller.cpp)
+
+add_executable(first_order_plant src/first_order_plant_sim.cpp)
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(pid_node pid_generate_messages_cpp)
+add_dependencies(controller pid_generate_messages_cpp)
+add_dependencies(first_order_plant pid_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(pid_node
 #   ${catkin_LIBRARIES}
 # )
+target_link_libraries(controller ${catkin_LIBRARIES})
+target_link_libraries(first_order_plant ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -131,18 +139,18 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS pid pid_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS controller first_order_plant
+#  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
@@ -163,11 +171,3 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
-add_executable(controller src/controller.cpp)
-target_link_libraries(controller ${catkin_LIBRARIES})
-add_dependencies(controller pid_generate_messages_cpp)
-
-add_executable(first_order_plant src/first_order_plant_sim.cpp)
-target_link_libraries(first_order_plant ${catkin_LIBRARIES})
-add_dependencies(first_order_plant pid_generate_messages_cpp)
