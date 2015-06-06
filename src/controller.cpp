@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   string topic_from_plant = "state";
   string node_name = "pid_node";
 
-  check_user_input(argc,argv, Kp,Ki,Kd, rate, topic_from_controller, topic_from_plant, node_name);
+  check_user_input(argc,argv, Kp,Ki,Kd, rate, topic_from_controller, topic_from_plant, node_name, ul, ll);
 
   // Initialize ROS stuff
   ros::init(argc, argv, node_name);
@@ -94,30 +94,78 @@ void chatterCallback(const pid::plant_msg& msg)
 
   // calculate the control effort
   u_msg.u = Kp*filtered_error.at(0)+Ki*error_integral+Kd*filtered_error_deriv.at(0);
+
+  // Check saturation limits
+  if (u_msg.u>ul)
+    u_msg.u = ul;
+  if (u_msg.u<ll)
+    u_msg.u = ll;
 }
 
-void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate, string& topic_from_controller, string& topic_from_plant, string& node_name)
+void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate, string& topic_from_controller, string& topic_from_plant, string& node_name, float& ul, float& ll)
 {
-  if ( argc<5 || argc>9 )
+  if ( (argc<5 || argc>17) || (argc%2 != 1) ) // Wrong # or not an even number of arguments
   {
-    ROS_ERROR("Incorrect input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate. A custom filter cutoff frequency is optional. Custom topic names and a custom node name are optional.");
-    ROS_ERROR("Example: rosrun pid controller 1.1 2.2 3.3 100[Hz] LPF_cutoff_freq[Hz] topic_from_controller topic_from_plant node_name");
+    ROS_ERROR("Incorrect input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate. A custom filter cutoff frequency, saturation limits, node name, and topic names are optional.");
+    cout<<endl;
+    cout<<"Example: rosrun pid controller 1.1 2.2 3.3 100 -fc 100 -nn pid_node_name"<<endl;
+    cout<<endl;
+    cout<<"Optional arguments:"<<endl<<endl;
+    cout<<"-fc Filter Cutoff frequency [Hz]"<<endl;
+    cout<<"-tfc name of Topic From Controller"<<endl;
+    cout<<"-ttc name of Topic From Plant"<<endl;
+    cout<<"-nn Name of pid Node"<<endl;
+    cout<<"-ul Upper Limit of control effort, e.g. maximum motor torque"<<endl;
+    cout<<"-ll Lower Limit of control effort, e.g. minimum motor torque"<<endl<<endl;
     exit(1);
   }
 
+  // First 4 arguments are mandatory
   sscanf(argv[1],"%f",&Kp); // Read Kp
   sscanf(argv[2],"%f",&Ki);
   sscanf(argv[3],"%f",&Kd);
   sscanf(argv[4],"%f",&rate);
 
-  if (argc>=6)
-    sscanf(argv[5],"%f",&cutoff_frequency);
-  if (argc>=7)
-    topic_from_controller = string(argv[6]);
-  if (argc>=8)
-    topic_from_plant = string(argv[7]);
-  if (argc==9)
-    node_name = string(argv[8]);
+  // Scan for any optional arguments
+  // Every other argument is a tag
+
+  char str_4 [] = {'x','x','x','x'};
+  
+  if (argc>5) // If there were optional arguments
+  {
+    for ( int i=5; i< argc-1; i=i+2)
+    {
+      sscanf(argv[i],"%s", str_4);
+
+      // Cutoff frequency
+      if ( !strncmp(str_4,"-fc",3) ) // Compare first 3 chars
+        sscanf(argv[i+1],"%f",&cutoff_frequency);
+
+      // Name of topic from controller
+      if ( !strncmp(str_4,"-tfc",4) ) // Compare first 4 chars
+        topic_from_controller = string(argv[i+1]);
+
+      // Name of topic to controller
+      if ( !strncmp(str_4,"-tfp",4) ) // Compare first 4 chars
+        topic_from_plant = string(argv[i+1]);
+
+      // Name of pid node
+      if ( !strncmp(str_4,"-nn",3) ) // Compare first 3 chars
+        node_name = string(argv[i+1]);
+
+      // Upper saturation limit
+      if ( !strncmp(str_4,"-ul",3) ) // Compare first 3 chars
+        sscanf(argv[i+1],"%f",&ul);
+
+      // Lower saturation limit
+      if ( !strncmp(str_4,"-ll",3) ) // Compare first 3 chars
+        sscanf(argv[i+1],"%f",&ll);
+    }
+  }
+
+  ////////////////////////////////////
+  // Error checking
+  ////////////////////////////////////
 
   if ( rate <= 0 )
   {
@@ -125,9 +173,24 @@ void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, f
     exit(1);
   }
 
+  if ( ll>ul )
+  {
+    ROS_ERROR("The lower saturation limit cannot be greater than the upper saturation limit.");
+    exit(1);
+  }
+  
+  ////////////////////////////////////
+  // Display parameters
+  ////////////////////////////////////
+
+  cout<< endl<<"PID PARAMETERS"<<endl<<"-----------------------------------------"<<endl;
   cout<<"Kp: "<<Kp<<",  Ki: "<<Ki<<",  Kd: "<<Kd<<",  Loop rate [Hz]: "<<rate<<endl;
   if ( cutoff_frequency== -1)
     cout<<"LPF cutoff frequency: 1/4 of sampling rate"<<endl;
   else
     cout<<"LPF cutoff frequency: "<<cutoff_frequency<<endl;
+  cout<<"pid node name: "<<node_name<<endl;
+  cout<<"Name of topic from controller: "<< topic_from_controller<<endl;
+  cout<<"Name of topic from the plant: "<< topic_from_plant<<endl;
+  cout<<"Saturation limits: "<< ul <<"/"<<ll<<endl<<"-----------------------------------------"<<endl<<endl;
 }
