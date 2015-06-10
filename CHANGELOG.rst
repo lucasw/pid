@@ -2,8 +2,8 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.6 (2015-06-09)
+------------------
 * Changing the way parameters are passed to check_user_input().
 * Contributors: Andy Zelenak
 
