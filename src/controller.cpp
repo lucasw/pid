@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   string topic_from_plant = "state";
   string node_name = "pid_node";
 
-  check_user_input(argc,argv, Kp,Ki,Kd, rate, topic_from_controller, topic_from_plant, node_name, ul, ll);
+  check_user_input(argc,argv, Kp,Ki,Kd, rate, topic_from_controller, topic_from_plant, node_name, ul, ll, anti_w);
 
   // Initialize ROS stuff
   ros::init(argc, argv, node_name);
@@ -64,6 +64,13 @@ void chatterCallback(const pid::plant_msg& msg)
   // integrate the error
   error_integral += error.at(0)*delta_t;
 
+  // Apply anti-windup to limit the size of the integral term
+  if ( error_integral > abs(anti_w) )
+    error_integral = abs(anti_w);
+
+  if ( error_integral < -abs(anti_w) )
+    error_integral = -abs(anti_w);
+
   // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
   float c;
   if (cutoff_frequency == -1)
@@ -102,9 +109,9 @@ void chatterCallback(const pid::plant_msg& msg)
     u_msg.u = ll;
 }
 
-void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate, string& topic_from_controller, string& topic_from_plant, string& node_name, float& ul, float& ll)
+void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate, string& topic_from_controller, string& topic_from_plant, string& node_name, float& ul, float& ll, float& anti_w)
 {
-  if ( (argc<5 || argc>17) || (argc%2 != 1) ) // Wrong # or not an even number of arguments
+  if ( (argc<5 || argc>19) || (argc%2 != 1) ) // Wrong # or not an even number of arguments
   {
     ROS_ERROR("Incorrect input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate. A custom filter cutoff frequency, saturation limits, node name, and topic names are optional.");
     cout<<endl;
@@ -116,7 +123,8 @@ void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, f
     cout<<"-ttc name of Topic From Plant"<<endl;
     cout<<"-nn Name of pid Node"<<endl;
     cout<<"-ul Upper Limit of control effort, e.g. maximum motor torque"<<endl;
-    cout<<"-ll Lower Limit of control effort, e.g. minimum motor torque"<<endl<<endl;
+    cout<<"-ll Lower Limit of control effort, e.g. minimum motor torque"<<endl;
+    cout<<"-aw Anti-Windup, i.e. the largest value the integral term can have."<<endl<<endl;
     exit(1);
   }
 
@@ -160,6 +168,11 @@ void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, f
       // Lower saturation limit
       if ( !strncmp(str_4,"-ll",3) ) // Compare first 3 chars
         sscanf(argv[i+1],"%f",&ll);
+
+      // Anti-windup
+      // Limit the maximum size that the integral term can have
+      if ( !strncmp(str_4,"-aw",3) ) // Compare first 3 chars
+        sscanf(argv[i+1],"%f",&anti_w);
     }
   }
 
@@ -192,5 +205,6 @@ void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, f
   cout<<"pid node name: "<<node_name<<endl;
   cout<<"Name of topic from controller: "<< topic_from_controller<<endl;
   cout<<"Name of topic from the plant: "<< topic_from_plant<<endl;
-  cout<<"Saturation limits: "<< ul <<"/"<<ll<<endl<<"-----------------------------------------"<<endl<<endl;
+  cout<<"Anti-windup: "<<anti_w<<endl;
+  cout<<"Saturation limits: "<< ul <<"/"<<ll<<endl<<"-----------------------------------------"<<endl;
 }
