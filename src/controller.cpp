@@ -12,12 +12,7 @@
 
 int main(int argc, char **argv)
 {
-  // Get input from the command line
-  string topic_from_controller = "control_effort";
-  string topic_from_plant = "state";
-  string node_name = "pid_node";
-
-  check_user_input(argc,argv, Kp,Ki,Kd, rate, topic_from_controller, topic_from_plant, node_name, ul, ll, anti_w);
+  check_user_input(argc, argv);
 
   // Initialize ROS stuff
   ros::init(argc, argv, node_name);
@@ -65,10 +60,10 @@ void chatterCallback(const pid::plant_msg& msg)
   error_integral += error.at(0)*delta_t;
 
   // Apply anti-windup to limit the size of the integral term
-  if ( error_integral > abs(anti_w) )
+  if ( error_integral > abs( anti_w ) )
     error_integral = abs(anti_w);
 
-  if ( error_integral < -abs(anti_w) )
+  if ( error_integral < -abs( anti_w ) )
     error_integral = -abs(anti_w);
 
   // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
@@ -109,7 +104,7 @@ void chatterCallback(const pid::plant_msg& msg)
     u_msg.u = ll;
 }
 
-void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, float& rate, string& topic_from_controller, string& topic_from_plant, string& node_name, float& ul, float& ll, float& anti_w)
+void check_user_input(int& argc, char** argv)
 {
   if ( (argc<5 || argc>19) || (argc%2 != 1) ) // Wrong # or not an even number of arguments
   {
@@ -198,7 +193,7 @@ void check_user_input(int& argc, char** argv, float& Kp, float& Ki, float& Kd, f
 
   cout<< endl<<"PID PARAMETERS"<<endl<<"-----------------------------------------"<<endl;
   cout<<"Kp: "<<Kp<<",  Ki: "<<Ki<<",  Kd: "<<Kd<<",  Loop rate [Hz]: "<<rate<<endl;
-  if ( cutoff_frequency== -1)
+  if ( cutoff_frequency== -1) // If the cutoff frequency was not specified by the user
     cout<<"LPF cutoff frequency: 1/4 of sampling rate"<<endl;
   else
     cout<<"LPF cutoff frequency: "<<cutoff_frequency<<endl;
