@@ -2,6 +2,11 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Changing the way parameters are passed to check_user_input().
+* Contributors: Andy Zelenak
+
 0.0.5 (2015-06-09)
 ------------------
 * Adding an anti-windup option.
