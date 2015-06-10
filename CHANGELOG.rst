@@ -2,8 +2,8 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.5 (2015-06-09)
+------------------
 * Adding an anti-windup option.
 * Contributors: Andy Zelenak
 
