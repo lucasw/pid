@@ -2,8 +2,8 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.7 (2015-07-26)
+------------------
 * Added a launch file, which required the arguments to be processed differently.
 * Contributors: Andy Zelenak
 
