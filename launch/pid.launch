@@ -1,0 +1,3 @@
+<launch>
+	<node name="pid_node" pkg="pid" type="controller" args="2 0.1 0.05 200" />
+</launch>

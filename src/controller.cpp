@@ -106,7 +106,12 @@ void chatterCallback(const pid::plant_msg& msg)
 
 void check_user_input(int& argc, char** argv)
 {
-  if ( (argc<5 || argc>19) || (argc%2 != 1) ) // Wrong # or not an even number of arguments
+  // Remove any arguments that are added by roslaunch
+  ros::V_string args_out; //Vector of strings
+  ros::removeROSArgs(argc, argv, args_out);
+
+
+  if ( (args_out.size()<5 || args_out.size()>19) || (args_out.size()%2 != 1) ) // Wrong # or not an even number of arguments
   {
     ROS_ERROR("Incorrect input arguments. Please follow the rosrun command with Kp, Ki, Kd, loop_rate. A custom filter cutoff frequency, saturation limits, node name, and topic names are optional.");
     cout<<endl;
@@ -123,50 +128,71 @@ void check_user_input(int& argc, char** argv)
     exit(1);
   }
 
+
   // First 4 arguments are mandatory
-  sscanf(argv[1],"%f",&Kp); // Read Kp
-  sscanf(argv[2],"%f",&Ki);
-  sscanf(argv[3],"%f",&Kd);
-  sscanf(argv[4],"%f",&rate);
+  std::stringstream ss( args_out.at(1) ); // Read Kp
+  ss >> Kp;
+
+  ss.str(std::string()); // Clear the variable
+  ss.clear();
+  ss.str(args_out.at(2)); // Read Ki
+  ss >> Ki;
+
+  ss.str(std::string()); // Clear the variable
+  ss.clear();
+  ss << args_out.at(3); // Read Kd
+  ss >> Kd;
+
+  ss.str(std::string()); // Clear the variable
+  ss.clear();
+  ss << args_out.at(4); // Read rate
+  ss >> rate;
+
 
   // Scan for any optional arguments
   // Every other argument is a tag
 
-  char str_4 [] = {'x','x','x','x'};
+  char tag [] = {'x','x','x','x'};
   
-  if (argc>5) // If there were optional arguments
+  if (args_out.size()>5) // If there were optional arguments
   {
-    for ( int i=5; i< argc-1; i=i+2)
+    for ( int i=5; i< args_out.size()-1; i=i+2)
     {
-      sscanf(argv[i],"%s", str_4);
+      // Read the tag
+      ss.str(std::string()); // Clear the variable
+      ss.clear();
+      ss << args_out.at(i);
+      ss >> tag;
+
+      //sscanf(args_out.at(i),"%s", tag);
 
       // Cutoff frequency
-      if ( !strncmp(str_4,"-fc",3) ) // Compare first 3 chars
+      if ( !strncmp(tag,"-fc",3) ) // Compare first 3 chars
         sscanf(argv[i+1],"%f",&cutoff_frequency);
 
       // Name of topic from controller
-      if ( !strncmp(str_4,"-tfc",4) ) // Compare first 4 chars
+      if ( !strncmp(tag,"-tfc",4) ) // Compare first 4 chars
         topic_from_controller = string(argv[i+1]);
 
       // Name of topic to controller
-      if ( !strncmp(str_4,"-tfp",4) ) // Compare first 4 chars
+      if ( !strncmp(tag,"-tfp",4) ) // Compare first 4 chars
         topic_from_plant = string(argv[i+1]);
 
       // Name of pid node
-      if ( !strncmp(str_4,"-nn",3) ) // Compare first 3 chars
+      if ( !strncmp(tag,"-nn",3) ) // Compare first 3 chars
         node_name = string(argv[i+1]);
 
       // Upper saturation limit
-      if ( !strncmp(str_4,"-ul",3) ) // Compare first 3 chars
+      if ( !strncmp(tag,"-ul",3) ) // Compare first 3 chars
         sscanf(argv[i+1],"%f",&ul);
 
       // Lower saturation limit
-      if ( !strncmp(str_4,"-ll",3) ) // Compare first 3 chars
+      if ( !strncmp(tag,"-ll",3) ) // Compare first 3 chars
         sscanf(argv[i+1],"%f",&ll);
 
       // Anti-windup
       // Limit the maximum size that the integral term can have
-      if ( !strncmp(str_4,"-aw",3) ) // Compare first 3 chars
+      if ( !strncmp(tag,"-aw",3) ) // Compare first 3 chars
         sscanf(argv[i+1],"%f",&anti_w);
     }
   }
