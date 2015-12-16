@@ -13,7 +13,6 @@
 // Initial conditions
 static const double x_IC  = 4.7;
 static const double t_IC = 0.0;
-static const double setpoint = -1.0;
 
 double delta_t = 0.01; // control period in seconds
 
@@ -25,4 +24,3 @@ static double u = 0.0;
 // Functions
 /////////////////////////////////////////////
 
-void chatterCallback(const pid::controller_msg& u_msg);
