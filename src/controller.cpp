@@ -4,41 +4,14 @@
 // Should run at a faster loop rate than the plant.
 
 #include "pid/pid_header.h"
+#include <pid/PidConfig.h>
+
+#include <dynamic_reconfigure/server.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////
 
-
-int main(int argc, char **argv)
-{
-  check_user_input(argc, argv);
-
-  // Initialize ROS stuff
-  ros::init(argc, argv, node_name);
-  ros::NodeHandle node;
-  ros::Rate loop_rate(rate); // Control frequency in Hz
-
-  // Publish on "control_effort" topic
-  ros::Publisher chatter_pub = node.advertise<pid::controller_msg>(topic_from_controller, 1);
-
-  // Subscribe to "state" topic
-  ros::Subscriber sub = node.subscribe(topic_from_plant, 1, chatterCallback );
-
-  // MAIN LOOP
-  while( ros::ok() )
-  {
-    ros::spinOnce();
-
-    // Publish the stabilizing control effort
-    //cout<< "Published control effort: "<< u_msg.u<<endl;
-    chatter_pub.publish(u_msg);
-
-    loop_rate.sleep();
-  }
-
-  return 0;
-}
 
 void chatterCallback(const pid::plant_msg& msg)
 {
@@ -102,6 +75,22 @@ void chatterCallback(const pid::plant_msg& msg)
     u_msg.u = ul;
   if (u_msg.u<ll)
     u_msg.u = ll;
+}
+
+bool first_reconfig = true;
+
+void reconfigure_callback(pid::PidConfig &config, uint32_t level)
+{
+  if (first_reconfig)
+  {
+    first_reconfig = false;
+    return;     // Ignore the first call to reconfigure which happens at startup
+  }
+
+  Kp = config.Kp * config.Kp_scale;
+  Ki = config.Ki * config.Ki_scale;
+  Kd = config.Kd * config.Kd_scale;
+  ROS_INFO("Pid reconfigure request: Kp: %f, Ki: %f, Kd: %f", Kp, Ki, Kd);
 }
 
 void check_user_input(int& argc, char** argv)
@@ -229,3 +218,39 @@ void check_user_input(int& argc, char** argv)
   cout<<"Anti-windup: "<<anti_w<<endl;
   cout<<"Saturation limits: "<< ul <<"/"<<ll<<endl<<"-----------------------------------------"<<endl;
 }
+
+int main(int argc, char **argv)
+{
+  check_user_input(argc, argv);
+
+  // Initialize ROS stuff
+  ros::init(argc, argv, node_name);
+  ros::NodeHandle node;
+  ros::Rate loop_rate(rate); // Control frequency in Hz
+
+  // Publish on "control_effort" topic
+  ros::Publisher chatter_pub = node.advertise<pid::controller_msg>(topic_from_controller, 1);
+
+  // Subscribe to "state" topic
+  ros::Subscriber sub = node.subscribe(topic_from_plant, 1, chatterCallback );
+
+  dynamic_reconfigure::Server<pid::PidConfig> config_server;
+  dynamic_reconfigure::Server<pid::PidConfig>::CallbackType f;
+  f = boost::bind(&reconfigure_callback, _1, _2);
+  config_server.setCallback(f);
+
+  // MAIN LOOP
+  while( ros::ok() )
+  {
+    ros::spinOnce();
+
+    // Publish the stabilizing control effort
+    //cout<< "Published control effort: "<< u_msg.u<<endl;
+    chatter_pub.publish(u_msg);
+
+    loop_rate.sleep();
+  }
+
+  return 0;
+}
+
