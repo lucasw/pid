@@ -228,10 +228,8 @@ int main(int argc, char **argv)
   ros::NodeHandle node;
   ros::Rate loop_rate(rate); // Control frequency in Hz
 
-  // Publish on "control_effort" topic
   ros::Publisher chatter_pub = node.advertise<pid::controller_msg>(topic_from_controller, 1);
 
-  // Subscribe to "state" topic
   ros::Subscriber sub = node.subscribe(topic_from_plant, 1, chatterCallback );
 
   dynamic_reconfigure::Server<pid::PidConfig> config_server;

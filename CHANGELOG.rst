@@ -2,6 +2,13 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.0.9 (2015-12-27)
+------------------
+* Merged in bouchier/pid (pull request #1)
+  Add dynamic reconfigure for Kx, change plant setpoint
+* add dynamic reconfigure for Kx, change plant setpoint
+* Contributors: AndyZe, Paul Bouchier
+
 0.0.7 (2015-07-26)
 ------------------
 * Added a launch file, which required the arguments to be processed differently.
