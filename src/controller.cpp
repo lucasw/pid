@@ -1,7 +1,7 @@
 
 // Subscribe to a topic about the state of a dynamic system and calculate feedback to
 // stabilize it.
-// Should run at a faster loop rate than the plant.
+// Should spin at a faster loop rate than the plant.
 
 #include "pid/pid_header.h"
 #include <pid/PidConfig.h>
@@ -134,7 +134,7 @@ void check_user_input(int& argc, char** argv)
 
   ss.str(std::string()); // Clear the variable
   ss.clear();
-  ss << args_out.at(4); // Read rate
+  ss << args_out.at(4); // Read spin rate
   ss >> rate;
 
 
