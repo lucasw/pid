@@ -40,7 +40,7 @@ void chatterCallback(const pid::plant_msg& msg)
     error_integral = -abs(anti_w);
 
   // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
-  float c;
+  double c;
   if (cutoff_frequency == -1)
     c = 1.0; // Default to a cut-off frequency at one-fourth of the sampling rate
   else

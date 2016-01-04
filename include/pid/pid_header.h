@@ -10,20 +10,20 @@ using namespace std;
 #include "pid/plant_msg.h"
 #include "pid/controller_msg.h"
 
-float prev_time = 0.0;
-float delta_t = 0.0;
-float error_integral = 0.0;
+double prev_time = 0.0;
+double delta_t = 0.0;
+double error_integral = 0.0;
 
-float Kp, Ki, Kd, rate; //Rate in Hz.
-float cutoff_frequency= -1.0; // Cutoff frequency for the derivative calculation in Hz. Negative-> Has not been set by the user yet, so use a default.
+double Kp, Ki, Kd, rate; //Rate in Hz.
+double cutoff_frequency= -1.0; // Cutoff frequency for the derivative calculation in Hz. Negative-> Has not been set by the user yet, so use a default.
 
-float ul=1000., ll=-1000.; // Upper and lower saturation limits
-float anti_w = 1000.0; // Anti-windup term. Limits the absolute value of the integral term.
+double ul=1000., ll=-1000.; // Upper and lower saturation limits
+double anti_w = 1000.0; // Anti-windup term. Limits the absolute value of the integral term.
 
-vector<float> error(3);
-vector<float> filtered_error(3);
-vector<float> error_deriv(3);
-vector<float> filtered_error_deriv(3);
+vector<double> error(3);
+vector<double> filtered_error(3);
+vector<double> error_deriv(3);
+vector<double> filtered_error_deriv(3);
 int loop_counter = 0; // Counts # of times through the control loop. Used to start taking a derivative after 2 rounds
 
 // Get input from the command line
