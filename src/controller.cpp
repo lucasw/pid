@@ -4,9 +4,9 @@
 // Should spin at a faster loop rate than the plant.
 
 #include "pid/pid_header.h"
-#include <pid/PidConfig.h>
+#include "pid/PidConfig.h"
 
-#include <dynamic_reconfigure/server.h>
+#include "dynamic_reconfigure/server.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -15,7 +15,7 @@
 
 void chatterCallback(const pid::plant_msg& msg)
 {
-  //ROS_INFO("I heard: %f", msg.x);
+  //ROS_INFO("I heard: %lf", msg.x);
 
   error.at(2) = error.at(1);
   error.at(1) = error.at(0);
@@ -90,7 +90,7 @@ void reconfigure_callback(pid::PidConfig &config, uint32_t level)
   Kp = config.Kp * config.Kp_scale;
   Ki = config.Ki * config.Ki_scale;
   Kd = config.Kd * config.Kd_scale;
-  ROS_INFO("Pid reconfigure request: Kp: %f, Ki: %f, Kd: %f", Kp, Ki, Kd);
+  ROS_INFO("Pid reconfigure request: Kp: %lf, Ki: %lf, Kd: %lf", Kp, Ki, Kd);
 }
 
 void check_user_input(int& argc, char** argv)
@@ -157,7 +157,7 @@ void check_user_input(int& argc, char** argv)
 
       // Cutoff frequency
       if ( !strncmp(tag,"-fc",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%f",&cutoff_frequency);
+        sscanf(argv[i+1],"%lf",&cutoff_frequency);
 
       // Name of topic from controller
       if ( !strncmp(tag,"-tfc",4) ) // Compare first 4 chars
@@ -173,16 +173,16 @@ void check_user_input(int& argc, char** argv)
 
       // Upper saturation limit
       if ( !strncmp(tag,"-ul",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%f",&ul);
+        sscanf(argv[i+1],"%lf",&ul);
 
       // Lower saturation limit
       if ( !strncmp(tag,"-ll",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%f",&ll);
+        sscanf(argv[i+1],"%lf",&ll);
 
       // Anti-windup
       // Limit the maximum size that the integral term can have
       if ( !strncmp(tag,"-aw",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%f",&anti_w);
+        sscanf(argv[i+1],"%lf",&anti_w);
     }
   }
 

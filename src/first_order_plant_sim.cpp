@@ -9,7 +9,7 @@ double plant_setpoint = -1.0;
 // Callback when something is published on 'control_effort'
 void plantControlCallback(const pid::controller_msg& u_msg)
 {
-  //ROS_INFO("I heard: [%f]", u_msg.u);
+  //ROS_INFO("I heard: [%lf]", u_msg.u);
 
   // Define the stabilizing control effort
   u = u_msg.u;
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    ROS_INFO("x1: %f   setpt: %f", msg.x, msg.setpoint);
+    ROS_INFO("x1: %lf   setpt: %lf", msg.x, msg.setpoint);
 
     plant_state_pub.publish(msg);
 
