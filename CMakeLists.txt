@@ -156,10 +156,10 @@ install(DIRECTORY include/${PROJECT_NAME}/
 )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-install(DIRECTORY launch/
+#install(DIRECTORY launch/
   #pid.launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-)
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+#)
 
 #############
 ## Testing ##
