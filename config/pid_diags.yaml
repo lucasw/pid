@@ -1,0 +1,12 @@
+pub_rate: 4.0
+analyzers:
+  Temperature_PID:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: 'Temperature PID'
+    timeout: 1.0
+    contains: ['temp_pid']
+  Left_wheel_PID:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: 'Left Wheel PID'
+    timeout: 1.0
+    contains: ['left_wheel_pid']

@@ -94,8 +94,8 @@ int main(int argc, char **argv)
   // Initialize 2nd-order (e.g. servo-motor with load) process variables
   double speed = 0;         // meters/sec
   double acceleration = 0;  // meters/sec^2
-  double mass = 1;          // in kg
-  double friction = 0.01;   // a decelerating force factor
+  double mass = 0.1;          // in kg
+  double friction = 0.1;    // a decelerating force factor
   double stiction = 1;      // control_effort must exceed this before stationary servo moves
   double Kv = 1;            // motor constant: force (newtons) / volt
   double Kbackemf = 0;      // Volts of back-emf per meter/sec of speed
@@ -130,8 +130,8 @@ int main(int argc, char **argv)
       //   opposed by back emf (expressed as speed) to produce a net force. Range: -1 to +1
       // displacement: the actual value of the servo output position. Input to PID controller
 
-      decel_force = speed * friction;  // can be +ve or -ve. Linear with speed
-      acceleration = ((Kv * (control_effort - (Kbackemf * speed)) - decel_force) / mass);   // a = F/m
+      decel_force = -(speed * friction);  // can be +ve or -ve. Linear with speed
+      acceleration = ((Kv * (control_effort - (Kbackemf * speed)) + decel_force) / mass);   // a = F/m
       speed = speed + (acceleration * delta_t);
       displacement = displacement + speed * delta_t;
 

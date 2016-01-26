@@ -146,7 +146,8 @@ void get_pid_diag_status(diagnostic_updater::DiagnosticStatusWrapper& pid_diag_s
 {
   pid_diag_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "PID controller nominal");
   pid_diag_status.add("Setpoint", setpoint);
-  pid_diag_status.add("Input", plant_state);
+  pid_diag_status.add("Pid Controller input", plant_state);
+  pid_diag_status.add("Error", error.at(0));
   pid_diag_status.add("Control output effort", control_effort);
   pid_diag_status.add("Proportional effort", proportional);
   pid_diag_status.add("Integral effort", integral);
@@ -337,7 +338,6 @@ int main(int argc, char **argv)
   node_priv.param<std::string>("topic_from_controller", topic_from_controller, "control_effort");
   node_priv.param<std::string>("topic_from_plant", topic_from_plant, "state");
   node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
-  node_priv.param<std::string>("diagnostic_period", setpoint_topic, "setpoint");
 
   // Update params if specified as command-line options, & print settings
   check_user_input(argc, argv);
