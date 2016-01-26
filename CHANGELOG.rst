@@ -2,6 +2,27 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.0.10 (2016-1-25)
+------------------
+* Split setpoint generator out into a separate node
+* Rename simulator to plant_sim.cpp & give it 1st & 2nd order behaviors, configured
+with a parameter. 
+* Deleted first_order_plant_sim.cpp, which is subsumed into plant_sim.cpp
+* Remove plant header, which was almost content-free.
+* Remove msg directory & switch to using Float64 messages for setpoint,
+process state, & control effort. Now it's generic - no special messages needed.
+* Add launch files for first & 2nd order behaviors. Get them to launch plots,
+diag monitor, reconfigure gui
+* Add ROS private parameters to set Pid params and simulator param
+* Explicitly call out std namespace to avoid accidental name conflicts
+* Remove parameter length checks to allow parameters to be set in part from
+launch file (the usual way), and in part from cmd line args (an infrequently-used
+way)
+* Rename pid_header.h to controller.h because it's used by controller.cpp - more standard
+C++ naming style
+* Add copyrights
+* Contributors: AndyZe, Paul Bouchier
+
 0.0.9 (2015-12-27)
 ------------------
 * Merged in bouchier/pid (pull request #1)
