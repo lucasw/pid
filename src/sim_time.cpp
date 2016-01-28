@@ -1,9 +1,10 @@
 /***************************************************************************//**
-* \file setpoint_node.cpp
+* \file sim_time.cpp
 *
-* \brief Node that publishes time-varying setpoint values
+* \brief Node that publishes simulated time to the /clock topic
+*
 * \author Paul Bouchier
-* \date January 9, 2016
+* \date January 27, 2016
 *
 * \section license License (BSD-3)
 * Copyright (c) 2016, Paul Bouchier
@@ -19,7 +20,7 @@
 * - Neither the name of Willow Garage, Inc. nor the names of its contributors
 * may be used to endorse or promote products derived from this software
 * without specific prior written permission.
-*
+
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -34,35 +35,56 @@
 ******************************************************************************/
 
 #include "ros/ros.h"
-#include "std_msgs/Float64.h"
+#include "rosgraph_msgs/Clock.h"
+
+#include <sys/time.h>
+
+#define SIM_TIME_INCREMENT_US 1000
+
+/*
+ * This node publishes increments of 1ms in time to the /clock topic. It does so
+ * at a rate determined by sim_speedup (simulation speedup factor), which should be passed
+ * in as a private parameter.
+ */
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "setpoint_node");
-  ROS_INFO("Starting setpoint publisher");
-  ros::NodeHandle setpoint_node;
+  ros::init(argc, argv, "sim_time_source");
+  ros::NodeHandle sim_time_node;
 
-  while (ros::Time(0) == ros::Time::now())
+  // support integral multiples of wallclock time for simulation speedup
+  int sim_speedup;      // integral factor by which to speed up simulation
+  ros::NodeHandle node_priv("~");
+  node_priv.param<int>("sim_speedup", sim_speedup, 1);
+
+  // get the current time & populate sim_time with it
+  struct timeval now;
+  int rv = gettimeofday(&now, NULL);
+  if (0 != rv)
   {
-    ROS_INFO("Setpoint_node spinning waiting for time to become non-zero");
-    sleep(1);
+    ROS_ERROR("Invalid return from gettimeofday: %d", rv);
+    return -1;
   }
 
-  std_msgs::Float64 setpoint;
-  setpoint.data = 1.0;
-  ros::Publisher setpoint_pub = setpoint_node.advertise<std_msgs::Float64>("setpoint", 1);
+  rosgraph_msgs::Clock sim_time;
+  sim_time.clock.sec = now.tv_sec;
+  sim_time.clock.nsec = now.tv_usec * 1000;
+  ros::Publisher sim_time_pub = sim_time_node.advertise<rosgraph_msgs::Clock>("clock", 1);
 
-  ros::Rate loop_rate(0.2);   // change setpoint every 5 seconds
+  ROS_INFO("Starting simulation time publisher at time: %d.%d", sim_time.clock.sec, sim_time.clock.nsec);
 
   while (ros::ok())
   {
+    sim_time_pub.publish(sim_time);
+
+    sim_time.clock.nsec = sim_time.clock.nsec + SIM_TIME_INCREMENT_US * 1000;
+    while (sim_time.clock.nsec > 1000000000)
+    {
+      sim_time.clock.nsec -= 1000000000;
+      ++sim_time.clock.sec;
+    }
+
+    usleep(SIM_TIME_INCREMENT_US / sim_speedup);
     ros::spinOnce();
-
-    setpoint_pub.publish(setpoint);     // publish twice so graph gets it as a step
-    setpoint.data = 0 - setpoint.data;
-    setpoint_pub.publish(setpoint);
-    ROS_INFO("Sent new setpoint: %f", setpoint.data);
-
-    loop_rate.sleep();
   }
 }

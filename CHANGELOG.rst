@@ -7,6 +7,10 @@ Changelog for package pid
 * Add diagnostics running at 4Hz. Publish interesting data like setpoint, plant state,
 error, control effort in diags for viewing
 * Add ROS private parameters to set Pid params and simulator param
+* Add Auto/Manual mode: Listen to the /pid_enable topic for a std_msgs/Bool
+that will disable or re-enable output from the PID controller
+* Support faster-than-wallclock simulation via a /clock publisher and the
+/use_sim_time parameter
 * Add launch files for first & 2nd order behaviors. Get them to launch plots,
 diag monitor, reconfigure gui
 * Split setpoint generator out into a separate node

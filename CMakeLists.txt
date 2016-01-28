@@ -47,31 +47,11 @@ generate_dynamic_reconfigure_options(
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-#add_message_files(
-#   FILES
-#   plant_msg.msg
-#   controller_msg.msg
-# )
-
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
    std_msgs
+   rosgraph_msgs
 )
 
 ###################################
@@ -112,15 +92,12 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 # add_executable(pid_node src/pid_node.cpp)
 
 add_executable(controller src/controller.cpp)
-#add_executable(first_order_plant src/first_order_plant_sim.cpp)
 add_executable(plant_sim src/plant_sim.cpp)
 add_executable(setpoint_node src/setpoint_node.cpp)
+add_executable(sim_time src/sim_time.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(pid_node pid_generate_messages_cpp)
-add_dependencies(controller pid_generate_messages_cpp)
-add_dependencies(plant_sim pid_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(pid_node
@@ -129,6 +106,7 @@ add_dependencies(plant_sim pid_generate_messages_cpp)
 target_link_libraries(controller ${catkin_LIBRARIES})
 target_link_libraries(plant_sim ${catkin_LIBRARIES})
 target_link_libraries(setpoint_node ${catkin_LIBRARIES})
+target_link_libraries(sim_time ${catkin_LIBRARIES})
 
 #############
 ## Install ##

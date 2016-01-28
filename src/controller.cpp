@@ -45,7 +45,6 @@
 void setpoint_callback(const std_msgs::Float64& setpoint_msg)
 {
   setpoint = setpoint_msg.data;
-  ROS_INFO("Received new setpoint: %f", setpoint);
 }
 
 void plant_state_callback(const std_msgs::Float64& state_msg)
@@ -113,17 +112,31 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
     control_effort = upper_limit;
   if (control_effort < lower_limit)
     control_effort = lower_limit;
-  //std::cout << "control_effort: " << control_effort << std::endl;
+
+//double tanFilt = ( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
+//std::cout << "control_effort: " << control_effort << " prop " << proportional << " int " << integral << " deriv " << derivative << " c " << c << " tan-filt " << tanFilt << " plant: " << plant_state << " setpoint " << setpoint << " filtAt0 " << filtered_error_deriv.at(0) << std::endl;
 
   ++measurements_received;
   diags->freq_status.tick();
   diags->diag_updater.update();
 
-  // Publish the stabilizing control effort
-  control_msg.data = control_effort;
-  control_effort_pub.publish(control_msg);
+  // Publish the stabilizing control effort if the controller is enabled
+  if (pid_enabled)
+  {
+    control_msg.data = control_effort;
+    control_effort_pub.publish(control_msg);
+  }
+  else
+  {
+    error_integral = 0.0;
+  }
 
   return;
+}
+
+void pid_enable_callback(const std_msgs::Bool& pid_enable_msg)
+{
+  pid_enabled = pid_enable_msg.data;
 }
 
 bool first_reconfig = true;
@@ -326,6 +339,12 @@ int main(int argc, char **argv)
   ros::NodeHandle node;
   ros::NodeHandle node_priv("~");
 
+  while (ros::Time(0) == ros::Time::now())
+  {
+    ROS_INFO("controller spinning waiting for time to become non-zero");
+    sleep(1);
+  }
+
   // Get params if specified in launch file or as params on command-line, set defaults
   node_priv.param<double>("Kp", Kp, 1.0);
   node_priv.param<double>("Ki", Ki, 0.0);
@@ -348,6 +367,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber sub = node.subscribe(topic_from_plant, 1, plant_state_callback );
   ros::Subscriber setpoint_sub = node.subscribe(setpoint_topic, 1, setpoint_callback );
+  ros::Subscriber pid_enabled_sub = node.subscribe("pid_enable", 1, pid_enable_callback );
 
   // configure dynamic reconfiguration
   dynamic_reconfigure::Server<pid::PidConfig> config_server;

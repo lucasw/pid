@@ -60,6 +60,13 @@ int main(int argc, char **argv)
 
   ros::init(argc, argv, "plant");
   ros::NodeHandle sim_node;
+
+  while (ros::Time(0) == ros::Time::now())
+  {
+    ROS_INFO("Plant_sim spinning waiting for time to become non-zero");
+    sleep(1);
+  }
+
   ros::NodeHandle node_priv("~");
   node_priv.param<int>("plant_order", plant_order, 1);
 

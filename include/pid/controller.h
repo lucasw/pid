@@ -42,6 +42,7 @@
 #include <diagnostic_updater/update_functions.h>
 #include "ros/ros.h"
 #include <std_msgs/Float64.h>
+#include <std_msgs/Bool.h>
 
 #include "math.h"
 #include <stdio.h>
@@ -52,6 +53,7 @@
 double plant_state;          // current output of plant
 double control_effort;       // output of pid controller
 double setpoint = 0;         // desired output of plant
+bool pid_enabled = true;         // PID is enabled to run
 
 ros::Time prev_time;
 ros::Duration delta_t;
@@ -66,7 +68,7 @@ double rate; // Control loop rate in Hz.
 
 // Cutoff frequency for the derivative calculation in Hz.
 // Negative -> Has not been set by the user yet, so use a default.
-double cutoff_frequency; 
+double cutoff_frequency = -1; 
 
 // Upper and lower saturation limits
 double upper_limit =  1000.0;
