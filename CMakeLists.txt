@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   dynamic_reconfigure
+  diagnostic_updater
 )
 
 generate_dynamic_reconfigure_options(
@@ -33,9 +34,9 @@ generate_dynamic_reconfigure_options(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES pid
-   CATKIN_DEPENDS roscpp std_msgs message_runtime dynamic_reconfigure
+   CATKIN_DEPENDS roscpp std_msgs message_runtime dynamic_reconfigure diagnostic_updater
 #  DEPENDS system_lib
 )
 
@@ -64,13 +65,14 @@ add_executable(plant_sim src/plant_sim.cpp)
 add_executable(setpoint_node src/setpoint_node.cpp)
 add_executable(sim_time src/sim_time.cpp)
 
+add_dependencies(controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
+add_dependencies(plant_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
+add_dependencies(setpoint_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
+add_dependencies(sim_time ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 
-## Specify libraries to link a library or executable target against
-# target_link_libraries(pid_node
-#   ${catkin_LIBRARIES}
-# )
 target_link_libraries(controller ${catkin_LIBRARIES})
 target_link_libraries(plant_sim ${catkin_LIBRARIES})
 target_link_libraries(setpoint_node ${catkin_LIBRARIES})
