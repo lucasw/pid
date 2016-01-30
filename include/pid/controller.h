@@ -1,5 +1,5 @@
 /***************************************************************************//**
-* \file pid_header.h
+* \file controller.h
 *
 * \brief Simple PID controller with dynamic reconfigure and diagnostics
 * \author Andy Zelenak
@@ -58,10 +58,10 @@ bool pid_enabled = true;         // PID is enabled to run
 ros::Time prev_time;
 ros::Duration delta_t;
 
-double error_integral = 0.0;
-double proportional;         // proportional term of output
-double integral;             // integral term of output
-double derivative;           // derivative term of output
+double error_integral = 0.;
+double proportional = 0.;         // proportional term of output
+double integral = 0.;             // integral term of output
+double derivative = 0.;           // derivative term of output
 
 double Kp, Ki, Kd;   // PID loop parameters
 double rate; // Control loop rate in Hz.
@@ -70,10 +70,17 @@ double rate; // Control loop rate in Hz.
 // Negative -> Has not been set by the user yet, so use a default.
 double cutoff_frequency = -1; 
 
+// Used in filter calculations. Default 1.0 corresponds to a cutoff frequency at
+// 1/4 of the sample rate.
+double c=1.;
+
+// Used to check for tan(0)==>NaN in the filter calculation
+double tan_filt = 1.;
+
 // Upper and lower saturation limits
-double upper_limit =  1000.0;
-double lower_limit = -1000.0; 
-double windup_limit = 1000.0; // Anti-windup term. Limits the absolute value of the integral term.
+double upper_limit =  1000.;
+double lower_limit = -1000.; 
+double windup_limit = 1000.; // Anti-windup term. Limits the absolute value of the integral term.
 
 std::vector<double> error(3);
 std::vector<double> filtered_error(3);

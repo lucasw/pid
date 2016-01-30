@@ -6,7 +6,7 @@
     </node>
 
     <node name="temp_pid" pkg="pid" type="controller" output="screen" >
-      <param name="Kp" value="4.0" />
+      <param name="Kp" value="10.0" />
       <param name="Ki" value="0.0" />
       <param name="Kd" value="0.0" />
       <param name="rate" value="20" />

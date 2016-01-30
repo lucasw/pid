@@ -74,11 +74,19 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
     error_integral = -fabsf(windup_limit);
 
   // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
-  double c;
-  if (cutoff_frequency == -1)
-    c = 1.0; // Default to a cut-off frequency at one-fourth of the sampling rate
-  else
-    c = 1/tan( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
+  if (cutoff_frequency != -1)
+  {
+    // Check if tan(_) is really small, could cause c = NaN
+    tan_filt = tan( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
+
+    // Avoid tan(0) ==> NaN
+    if ( (tan_filt<=0.) && (tan_filt>-0.01) )
+      tan_filt = -0.01;
+    if ( (tan_filt>=0.) && (tan_filt<0.01) )
+      tan_filt = 0.01;
+
+    c = 1/tan_filt;
+  }
  
   filtered_error.at(2) = filtered_error.at(1);
   filtered_error.at(1) = filtered_error.at(0); 
@@ -113,8 +121,8 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   if (control_effort < lower_limit)
     control_effort = lower_limit;
 
-//double tanFilt = ( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
-//std::cout << "control_effort: " << control_effort << " prop " << proportional << " int " << integral << " deriv " << derivative << " c " << c << " tan-filt " << tanFilt << " plant: " << plant_state << " setpoint " << setpoint << " filtAt0 " << filtered_error_deriv.at(0) << std::endl;
+  //double tanFilt = ( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
+   std::cout << "control_effort: " << control_effort << " prop " << proportional << " int " << integral << " deriv " << derivative << " c " << c << " tan_filt: " << tan_filt << " plant: " << plant_state << " setpoint " << setpoint << " filtAt0 " << filtered_error_deriv.at(0) << std::endl;
 
   ++measurements_received;
   diags->freq_status.tick();
@@ -300,6 +308,12 @@ void check_user_input(int& argc, char** argv)
     ROS_ERROR("The lower saturation limit cannot be greater than the upper saturation limit.");
     exit(1);
   }
+
+  if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
+  {
+    ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
+  }
+
   return;
 }
 
