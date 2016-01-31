@@ -59,9 +59,19 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   if (!prev_time.isZero()) // Not first time through the program  
   {
     delta_t = ros::Time::now() - prev_time;
+    prev_time = ros::Time::now();
+    if (0 == delta_t.toSec())
+    {
+      ROS_ERROR("delta_t is 0, skipping this loop. Possible overloaded cpu at time: %f", ros::Time::now().toSec());
+      return;
+    }
   }
-  
-  prev_time = ros::Time::now();
+  else
+  {
+    ROS_INFO("prev_time is 0, doing nothing");
+    prev_time = ros::Time::now();
+    return;
+  }
 
   // integrate the error
   error_integral += error.at(0) * delta_t.toSec();
@@ -91,7 +101,6 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   filtered_error.at(2) = filtered_error.at(1);
   filtered_error.at(1) = filtered_error.at(0); 
   filtered_error.at(0) = (1/(1+c*c+1.414*c))*(error.at(2)+2*error.at(1)+error.at(0)-(2-1.414)*filtered_error.at(2));
-  //std::cout<<"Error: "<< error.at(0) << "   Filtered_error: "<< filtered_error.at(0)<<std::endl;
 
   // Take derivative of error
   // First the raw, unfiltered data:
@@ -107,8 +116,6 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   else
     loop_counter++;
 
-  //std::cout<<"Filtered error derivative: "<< filtered_error_deriv.at(0)<<std::endl;
-
   // calculate the control effort
   proportional = Kp * filtered_error.at(0);
   integral = Ki * error_integral;
@@ -121,9 +128,6 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   if (control_effort < lower_limit)
     control_effort = lower_limit;
 
-  //double tanFilt = ( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
-   std::cout << "control_effort: " << control_effort << " prop " << proportional << " int " << integral << " deriv " << derivative << " c " << c << " tan_filt: " << tan_filt << " plant: " << plant_state << " setpoint " << setpoint << " filtAt0 " << filtered_error_deriv.at(0) << std::endl;
-
   ++measurements_received;
   diags->freq_status.tick();
   diags->diag_updater.update();
@@ -131,7 +135,15 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   // Publish the stabilizing control effort if the controller is enabled
   if (pid_enabled)
   {
-    control_msg.data = control_effort;
+    if (reverse_acting)
+    {
+      control_msg.data = -control_effort;
+    }
+    else
+    {
+      control_msg.data = control_effort;
+    }
+
     control_effort_pub.publish(control_msg);
   }
   else
@@ -204,10 +216,6 @@ void check_user_input(int& argc, char** argv)
   // Remove any arguments that are added by roslaunch
   ros::V_string args_out; //Vector of strings
   ros::removeROSArgs(argc, argv, args_out);
-
-  // If no arguments provided, print usage
-  if (1 == args_out.size())
-    usage();
 
   // First 4 arguments (Kp, Ki, Kd, rate) are positional and if provided, must be provided
   // before any others are provided
@@ -292,21 +300,24 @@ void check_user_input(int& argc, char** argv)
         sscanf(argv[i+1],"%lf",&windup_limit);
     }
   }
+}
 
   ////////////////////////////////////
   // Error checking
   ////////////////////////////////////
 
+bool validate_parameters()
+{
   if ( rate <= 0 )
   {
     ROS_ERROR("Enter a positive value for the loop rate.");
-    exit(1);
+    return(false);
   }
 
   if ( lower_limit > upper_limit )
   {
     ROS_ERROR("The lower saturation limit cannot be greater than the upper saturation limit.");
-    exit(1);
+    return(false);
   }
 
   if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
@@ -314,7 +325,7 @@ void check_user_input(int& argc, char** argv)
     ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
   }
 
-  return;
+  return true;;
 }
 
   ////////////////////////////////////
@@ -334,8 +345,9 @@ void print_parameters()
   std::cout << "Name of topic from the plant: " << topic_from_plant << std::endl;
   std::cout << "Name of setpoint topic: " << setpoint_topic << std::endl;
   std::cout << "Integral-windup limit: " << windup_limit << std::endl;
-  std::cout << "Saturation limits: " << upper_limit << "/" << lower_limit << std::endl
-            << "-----------------------------------------" << std::endl;
+  std::cout << "Saturation limits: " << upper_limit << "/" << lower_limit << std::endl;
+  std::cout << "Reverse acting: " << reverse_acting << std::endl;
+  std::cout << "-----------------------------------------" << std::endl;
 
   return;
 }
@@ -368,6 +380,7 @@ int main(int argc, char **argv)
   node_priv.param<double>("lower_limit", lower_limit, -1000.0);
   node_priv.param<double>("windup_limit", windup_limit, 1000.0);
   node_priv.param<double>("cutoff_frequency", cutoff_frequency, -1.0);
+  node_priv.param<bool>("reverse_acting", reverse_acting, false);
   node_priv.param<std::string>("topic_from_controller", topic_from_controller, "control_effort");
   node_priv.param<std::string>("topic_from_plant", topic_from_plant, "state");
   node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
@@ -375,6 +388,11 @@ int main(int argc, char **argv)
   // Update params if specified as command-line options, & print settings
   check_user_input(argc, argv);
   print_parameters();
+  if (not validate_parameters())
+  {
+    std::cout << "Error: invalid parameter or command-line error\n";
+    usage();
+  }
 
   // instantiate publishers & subscribers
   control_effort_pub = node.advertise<std_msgs::Float64>(topic_from_controller, 1);
