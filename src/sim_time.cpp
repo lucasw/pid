@@ -39,7 +39,7 @@
 
 #include <sys/time.h>
 
-#define SIM_TIME_INCREMENT_US 1000
+#define SIM_TIME_INCREMENT_US 10000
 
 /*
  * This node publishes increments of 1ms in time to the /clock topic. It does so
@@ -58,8 +58,11 @@ int main(int argc, char **argv)
   node_priv.param<int>("sim_speedup", sim_speedup, 1);
 
   // get the current time & populate sim_time with it
+  struct timeval start;
+  int rv = gettimeofday(&start, NULL);
+  usleep(1000);
   struct timeval now;
-  int rv = gettimeofday(&now, NULL);
+  rv = gettimeofday(&now, NULL);
   if (0 != rv)
   {
     ROS_ERROR("Invalid return from gettimeofday: %d", rv);
@@ -67,7 +70,7 @@ int main(int argc, char **argv)
   }
 
   rosgraph_msgs::Clock sim_time;
-  sim_time.clock.sec = now.tv_sec;
+  sim_time.clock.sec = now.tv_sec - start.tv_sec;
   sim_time.clock.nsec = now.tv_usec * 1000;
   ros::Publisher sim_time_pub = sim_time_node.advertise<rosgraph_msgs::Clock>("clock", 1);
 

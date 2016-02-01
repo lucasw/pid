@@ -43,13 +43,21 @@
 
 // Global so it can be passed from the callback fxn to main
 static double control_effort = 0.0;
+static bool reverse_acting = false;
 
 
 // Callback when something is published on 'control_effort'
 void ControlEffortCallback(const std_msgs::Float64& control_effort_input)
 {
   // the stabilizing control effort
-  control_effort = control_effort_input.data;
+  if (reverse_acting)
+  {
+    control_effort = -control_effort_input.data;
+  }
+  else
+  {
+    control_effort = control_effort_input.data;
+  }
 }
 
 int main(int argc, char **argv)
@@ -69,6 +77,7 @@ int main(int argc, char **argv)
 
   ros::NodeHandle node_priv("~");
   node_priv.param<int>("plant_order", plant_order, 1);
+  node_priv.param<bool>("reverse_acting", reverse_acting, false);
 
   if (plant_order == 1)
   {
@@ -102,7 +111,7 @@ int main(int argc, char **argv)
   double speed = 0;         // meters/sec
   double acceleration = 0;  // meters/sec^2
   double mass = 0.1;          // in kg
-  double friction = 0.1;    // a decelerating force factor
+  double friction = 1.0;    // a decelerating force factor
   double stiction = 1;      // control_effort must exceed this before stationary servo moves
   double Kv = 1;            // motor constant: force (newtons) / volt
   double Kbackemf = 0;      // Volts of back-emf per meter/sec of speed
@@ -126,7 +135,7 @@ int main(int argc, char **argv)
       {
         // if nearly stopped, stop it & require overcoming stiction to restart
         speed = 0;
-        if (control_effort < stiction)
+        if (fabs(control_effort) < stiction)
         {
           control_effort = 0;
         }
