@@ -210,97 +210,6 @@ void usage()
        << std::endl;
 }
 
-void check_user_input(int& argc, char** argv)
-{
-  // Remove any arguments that are added by roslaunch
-  ros::V_string args_out; //Vector of strings
-  ros::removeROSArgs(argc, argv, args_out);
-
-  // First 4 arguments (Kp, Ki, Kd, rate) are positional and if provided, must be provided
-  // before any others are provided
-  std::stringstream ss;
-  if (1 < args_out.size())    // if have at least one command-line arg
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss.str( args_out.at(1) ); // Read Kp
-    ss >> Kp;
-  }
-
-  if (2 < args_out.size())    // if have at least 2 command-line args
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss.str(args_out.at(2)); // Read Ki
-    ss >> Ki;
-  }
-
-  if (3 < args_out.size())    // if have at least 3 command-line args
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss << args_out.at(3); // Read Kd
-    ss >> Kd;
-  }
-
-  if (4 < args_out.size())    // if have at least 4 command-line args
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss << args_out.at(4); // Read rate
-    ss >> rate;
-  }
-
-
-  // Scan for any optional arguments
-  // Every other argument is a tag
-
-  char tag [] = {'x','x','x','x'};
-  
-  if (args_out.size()>5) // If there were optional arguments
-  {
-    for ( int i=5; i< args_out.size()-1; i=i+2)
-    {
-      // Read the tag
-      ss.str(std::string()); // Clear the variable
-      ss.clear();
-      ss << args_out.at(i);
-      ss >> tag;
-
-      //sscanf(args_out.at(i),"%s", tag);
-
-      // Cutoff frequency
-      if ( !strncmp(tag,"-fc",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&cutoff_frequency);
-
-      // Name of topic from controller
-      if ( !strncmp(tag,"-tfc",4) ) // Compare first 4 chars
-        topic_from_controller = std::string(argv[i+1]);
-
-      // Name of topic to controller
-      if ( !strncmp(tag,"-tfp",4) ) // Compare first 4 chars
-        topic_from_plant = std::string(argv[i+1]);
-
-      // Name of pid node
-      if ( !strncmp(tag,"-nn",3) ) // Compare first 3 chars
-        node_name = std::string(argv[i+1]);
-
-      // Upper saturation limit
-      if ( !strncmp(tag,"-ul",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&upper_limit);
-
-      // Lower saturation limit
-      if ( !strncmp(tag,"-ll",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&lower_limit);
-
-      // Anti-windup
-      // Limit the maximum size that the integral term can have
-      if ( !strncmp(tag,"-aw",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&windup_limit);
-    }
-  }
-}
-
   ////////////////////////////////////
   // Error checking
   ////////////////////////////////////
@@ -378,7 +287,6 @@ int main(int argc, char **argv)
   node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
 
   // Update params if specified as command-line options, & print settings
-  check_user_input(argc, argv);
   print_parameters();
   if (not validate_parameters())
   {
