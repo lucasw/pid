@@ -49,6 +49,12 @@ void setpoint_callback(const std_msgs::Float64& setpoint_msg)
 
 void plant_state_callback(const std_msgs::Float64& state_msg)
 {
+
+  if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
+  {
+    ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
+  }
+
   plant_state = state_msg.data;
 
   error.at(2) = error.at(1);
@@ -135,14 +141,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   // Publish the stabilizing control effort if the controller is enabled
   if (pid_enabled)
   {
-    if (reverse_acting)
-    {
-      control_msg.data = -control_effort;
-    }
-    else
-    {
-      control_msg.data = control_effort;
-    }
+    control_msg.data = control_effort;
 
     control_effort_pub.publish(control_msg);
   }
@@ -320,11 +319,6 @@ bool validate_parameters()
     return(false);
   }
 
-  if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
-  {
-    ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
-  }
-
   return true;;
 }
 
@@ -346,7 +340,6 @@ void print_parameters()
   std::cout << "Name of setpoint topic: " << setpoint_topic << std::endl;
   std::cout << "Integral-windup limit: " << windup_limit << std::endl;
   std::cout << "Saturation limits: " << upper_limit << "/" << lower_limit << std::endl;
-  std::cout << "Reverse acting: " << reverse_acting << std::endl;
   std::cout << "-----------------------------------------" << std::endl;
 
   return;
@@ -380,7 +373,6 @@ int main(int argc, char **argv)
   node_priv.param<double>("lower_limit", lower_limit, -1000.0);
   node_priv.param<double>("windup_limit", windup_limit, 1000.0);
   node_priv.param<double>("cutoff_frequency", cutoff_frequency, -1.0);
-  node_priv.param<bool>("reverse_acting", reverse_acting, false);
   node_priv.param<std::string>("topic_from_controller", topic_from_controller, "control_effort");
   node_priv.param<std::string>("topic_from_plant", topic_from_plant, "state");
   node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
