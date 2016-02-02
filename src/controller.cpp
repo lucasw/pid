@@ -49,6 +49,12 @@ void setpoint_callback(const std_msgs::Float64& setpoint_msg)
 
 void plant_state_callback(const std_msgs::Float64& state_msg)
 {
+
+  if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
+  {
+    ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
+  }
+
   plant_state = state_msg.data;
 
   error.at(2) = error.at(1);
@@ -135,14 +141,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   // Publish the stabilizing control effort if the controller is enabled
   if (pid_enabled)
   {
-    if (reverse_acting)
-    {
-      control_msg.data = -control_effort;
-    }
-    else
-    {
-      control_msg.data = control_effort;
-    }
+    control_msg.data = control_effort;
 
     control_effort_pub.publish(control_msg);
   }
@@ -211,97 +210,6 @@ void usage()
        << std::endl;
 }
 
-void check_user_input(int& argc, char** argv)
-{
-  // Remove any arguments that are added by roslaunch
-  ros::V_string args_out; //Vector of strings
-  ros::removeROSArgs(argc, argv, args_out);
-
-  // First 4 arguments (Kp, Ki, Kd, rate) are positional and if provided, must be provided
-  // before any others are provided
-  std::stringstream ss;
-  if (1 < args_out.size())    // if have at least one command-line arg
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss.str( args_out.at(1) ); // Read Kp
-    ss >> Kp;
-  }
-
-  if (2 < args_out.size())    // if have at least 2 command-line args
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss.str(args_out.at(2)); // Read Ki
-    ss >> Ki;
-  }
-
-  if (3 < args_out.size())    // if have at least 3 command-line args
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss << args_out.at(3); // Read Kd
-    ss >> Kd;
-  }
-
-  if (4 < args_out.size())    // if have at least 4 command-line args
-  {
-    ss.str(std::string()); // Clear the variable
-    ss.clear();
-    ss << args_out.at(4); // Read rate
-    ss >> rate;
-  }
-
-
-  // Scan for any optional arguments
-  // Every other argument is a tag
-
-  char tag [] = {'x','x','x','x'};
-  
-  if (args_out.size()>5) // If there were optional arguments
-  {
-    for ( int i=5; i< args_out.size()-1; i=i+2)
-    {
-      // Read the tag
-      ss.str(std::string()); // Clear the variable
-      ss.clear();
-      ss << args_out.at(i);
-      ss >> tag;
-
-      //sscanf(args_out.at(i),"%s", tag);
-
-      // Cutoff frequency
-      if ( !strncmp(tag,"-fc",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&cutoff_frequency);
-
-      // Name of topic from controller
-      if ( !strncmp(tag,"-tfc",4) ) // Compare first 4 chars
-        topic_from_controller = std::string(argv[i+1]);
-
-      // Name of topic to controller
-      if ( !strncmp(tag,"-tfp",4) ) // Compare first 4 chars
-        topic_from_plant = std::string(argv[i+1]);
-
-      // Name of pid node
-      if ( !strncmp(tag,"-nn",3) ) // Compare first 3 chars
-        node_name = std::string(argv[i+1]);
-
-      // Upper saturation limit
-      if ( !strncmp(tag,"-ul",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&upper_limit);
-
-      // Lower saturation limit
-      if ( !strncmp(tag,"-ll",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&lower_limit);
-
-      // Anti-windup
-      // Limit the maximum size that the integral term can have
-      if ( !strncmp(tag,"-aw",3) ) // Compare first 3 chars
-        sscanf(argv[i+1],"%lf",&windup_limit);
-    }
-  }
-}
-
   ////////////////////////////////////
   // Error checking
   ////////////////////////////////////
@@ -318,11 +226,6 @@ bool validate_parameters()
   {
     ROS_ERROR("The lower saturation limit cannot be greater than the upper saturation limit.");
     return(false);
-  }
-
-  if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
-  {
-    ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
   }
 
   return true;;
@@ -346,7 +249,6 @@ void print_parameters()
   std::cout << "Name of setpoint topic: " << setpoint_topic << std::endl;
   std::cout << "Integral-windup limit: " << windup_limit << std::endl;
   std::cout << "Saturation limits: " << upper_limit << "/" << lower_limit << std::endl;
-  std::cout << "Reverse acting: " << reverse_acting << std::endl;
   std::cout << "-----------------------------------------" << std::endl;
 
   return;
@@ -380,13 +282,11 @@ int main(int argc, char **argv)
   node_priv.param<double>("lower_limit", lower_limit, -1000.0);
   node_priv.param<double>("windup_limit", windup_limit, 1000.0);
   node_priv.param<double>("cutoff_frequency", cutoff_frequency, -1.0);
-  node_priv.param<bool>("reverse_acting", reverse_acting, false);
   node_priv.param<std::string>("topic_from_controller", topic_from_controller, "control_effort");
   node_priv.param<std::string>("topic_from_plant", topic_from_plant, "state");
   node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
 
   // Update params if specified as command-line options, & print settings
-  check_user_input(argc, argv);
   print_parameters();
   if (not validate_parameters())
   {

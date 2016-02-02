@@ -54,7 +54,6 @@ double plant_state;                 // current output of plant
 double control_effort;              // output of pid controller
 double setpoint = 0;                // desired output of plant
 bool pid_enabled = true;            // PID is enabled to run
-bool reverse_acting;                // PID output must act in reverse
 
 ros::Time prev_time;
 ros::Duration delta_t;
