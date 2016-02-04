@@ -61,7 +61,6 @@ int main(int argc, char **argv)
     setpoint_pub.publish(setpoint);     // publish twice so graph gets it as a step
     setpoint.data = 0 - setpoint.data;
     setpoint_pub.publish(setpoint);
-    ROS_INFO("Sent new setpoint: %f", setpoint.data);
 
     loop_rate.sleep();
   }

@@ -64,7 +64,6 @@ double integral = 0.;             // integral term of output
 double derivative = 0.;           // derivative term of output
 
 double Kp, Ki, Kd;   // PID loop parameters
-double rate; // Control loop rate in Hz.
 
 // Cutoff frequency for the derivative calculation in Hz.
 // Negative -> Has not been set by the user yet, so use a default.

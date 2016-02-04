@@ -187,41 +187,12 @@ void get_pid_diag_status(diagnostic_updater::DiagnosticStatusWrapper& pid_diag_s
   pid_diag_status.add("Measurements received", measurements_received);
 }
 
-void usage()
-{
-  std::cout << std::endl;
-  std::cout << "Usage: controller [ Kp Ki Kd rate [<command-line options>]" << std::endl;
-  std::cout << "Example: rosrun pid controller 1.1 2.2 3.3 100 -fc 100 -nn pid_node_name" << std::endl;
-  std::cout << std::endl;
-  std::cout << "All arguments are optional and override parameters. Defaults are provided." << std::endl;
-  std::cout << "Optional arguments:" << std::endl << std::endl;
-  std::cout << "Kp (default: 1), Ki (default: 0), Kd (default: 0), rate (default: 50)\n";
-  std::cout << "-fc Filter Cutoff frequency [Hz]" << std::endl;
-  std::cout << "-tfc name of Topic From Controller" << std::endl;
-  std::cout << "-ttc name of Topic From Plant" << std::endl;
-  std::cout << "-nn Name of pid Node" << std::endl;
-  std::cout << "-ul Upper Limit of control effort, e.g. maximum motor torque" << std::endl;
-  std::cout << "-ll Lower Limit of control effort, e.g. minimum motor torque" << std::endl;
-  std::cout << "-aw Anti-Windup, i.e. the largest value the integral term can have." << std::endl
-            << std::endl;
-  std::cout << "Alternatively, provide parameters ~Kp, ~Ki, ~Kd, ~cutoff_frequency," << std::endl 
-       << "~upper_limit, ~lower_limit, ~windup_limit," << std::endl
-       << "~topic_from_controller, ~topic_from_plant, ~node_name"
-       << std::endl;
-}
-
   ////////////////////////////////////
   // Error checking
   ////////////////////////////////////
 
 bool validate_parameters()
 {
-  if ( rate <= 0 )
-  {
-    ROS_ERROR("Enter a positive value for the loop rate.");
-    return(false);
-  }
-
   if ( lower_limit > upper_limit )
   {
     ROS_ERROR("The lower saturation limit cannot be greater than the upper saturation limit.");
@@ -237,8 +208,7 @@ bool validate_parameters()
 void print_parameters()
 {
   std::cout<< std::endl<<"PID PARAMETERS"<<std::endl<<"-----------------------------------------"<<std::endl;
-  std::cout << "Kp: " << Kp << ",  Ki: " << Ki << ",  Kd: " << Kd << ",  Loop rate [Hz]: "
-            << rate << std::endl;
+  std::cout << "Kp: " << Kp << ",  Ki: " << Ki << ",  Kd: " << Kd << std::endl;
   if ( cutoff_frequency== -1) // If the cutoff frequency was not specified by the user
     std::cout<<"LPF cutoff frequency: 1/4 of sampling rate"<<std::endl;
   else
@@ -277,7 +247,6 @@ int main(int argc, char **argv)
   node_priv.param<double>("Kp", Kp, 1.0);
   node_priv.param<double>("Ki", Ki, 0.0);
   node_priv.param<double>("Kd", Kd, 0.0);
-  node_priv.param<double>("rate", rate, 50.0);
   node_priv.param<double>("upper_limit", upper_limit, 1000.0);
   node_priv.param<double>("lower_limit", lower_limit, -1000.0);
   node_priv.param<double>("windup_limit", windup_limit, 1000.0);
@@ -290,8 +259,7 @@ int main(int argc, char **argv)
   print_parameters();
   if (not validate_parameters())
   {
-    std::cout << "Error: invalid parameter or command-line error\n";
-    usage();
+    std::cout << "Error: invalid parameter\n";
   }
 
   // instantiate publishers & subscribers
