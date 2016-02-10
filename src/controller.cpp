@@ -106,7 +106,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
  
   filtered_error.at(2) = filtered_error.at(1);
   filtered_error.at(1) = filtered_error.at(0); 
-  filtered_error.at(0) = (1/(1+c*c+1.414*c))*(error.at(2)+2*error.at(1)+error.at(0)-(2-1.414)*filtered_error.at(2));
+  filtered_error.at(0) = (1/(1+c*c+1.414*c))*(error.at(2)+2*error.at(1)+error.at(0)-(c*c-1.414*c+1)*filtered_error.at(2)-(-2*c*c+2)*filtered_error.at(1));
 
   // Take derivative of error
   // First the raw, unfiltered data:
@@ -118,7 +118,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   filtered_error_deriv.at(1) = filtered_error_deriv.at(0);
 
   if ( loop_counter>2 ) // Let some data accumulate
-    filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(2-1.414)*filtered_error_deriv.at(2));
+    filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(c*c-1.414*c+1)*filtered_error_deriv.at(2)-(-2*c*c+2)*filtered_error_deriv.at(1));
   else
     loop_counter++;
 
