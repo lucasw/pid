@@ -9,4 +9,9 @@ analyzers:
     type: diagnostic_aggregator/GenericAnalyzer
     path: 'Left Wheel PID'
     timeout: 1.0
-    contains: ['left_wheel_pid']
+    contains: ['left_wheel']
+  Right_wheel_PID:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: 'Right Wheel PID'
+    timeout: 1.0
+    contains: ['right_wheel']
