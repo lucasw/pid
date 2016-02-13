@@ -102,7 +102,7 @@ std_msgs::Float64 state_msg;
 double min_loop_frequency = 1;
 double max_loop_frequency = 1000;
 int measurements_received = 0;
-
+diagnostic_msgs::DiagnosticStatus diag_status;
 
 class PidControllerDiags
 {

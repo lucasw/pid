@@ -130,25 +130,40 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
 
   // Apply saturation limits
   if (control_effort > upper_limit)
+  {
     control_effort = upper_limit;
-  if (control_effort < lower_limit)
+    diag_status.level = diagnostic_msgs::DiagnosticStatus::WARN;
+    diag_status.message = "Control effort exceeded upper limit";
+  }
+  else if (control_effort < lower_limit)
+  {
     control_effort = lower_limit;
-
-  ++measurements_received;
-  diags->freq_status.tick();
-  diags->diag_updater.update();
+    diag_status.level = diagnostic_msgs::DiagnosticStatus::WARN;
+    diag_status.message = "Control effort exceeded lower limit";
+  }
+  else
+  {
+    diag_status.level = diagnostic_msgs::DiagnosticStatus::OK;
+    diag_status.message = "PID controller nominal";
+  }
 
   // Publish the stabilizing control effort if the controller is enabled
   if (pid_enabled)
   {
     control_msg.data = control_effort;
-
     control_effort_pub.publish(control_msg);
   }
   else
   {
     error_integral = 0.0;
+    diag_status.level = diagnostic_msgs::DiagnosticStatus::ERROR;
+    diag_status.message = "PID controller disabled";
   }
+
+  // update diags
+  ++measurements_received;
+  diags->freq_status.tick();
+  diags->diag_updater.update();
 
   return;
 }
@@ -176,7 +191,7 @@ void reconfigure_callback(pid::PidConfig &config, uint32_t level)
 
 void get_pid_diag_status(diagnostic_updater::DiagnosticStatusWrapper& pid_diag_status)
 {
-  pid_diag_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "PID controller nominal");
+  pid_diag_status.summary(diag_status);
   pid_diag_status.add("Setpoint", setpoint);
   pid_diag_status.add("Plant State", plant_state);
   pid_diag_status.add("Control Error", error.at(0));
@@ -277,8 +292,11 @@ int main(int argc, char **argv)
   f = boost::bind(&reconfigure_callback, _1, _2);
   config_server.setCallback(f);
 
-  // initialize diagnostics updaters
+  // initialize diagnostics
   diags = new PidControllerDiags;
+
+  diag_status.level = diagnostic_msgs::DiagnosticStatus::OK;
+  diag_status.message = "PID status nominal";
 
   diags->diag_updater.setHardwareID(node_name);
   diags->diag_updater.add(diags->freq_status);
