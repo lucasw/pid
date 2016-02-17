@@ -99,10 +99,10 @@ std_msgs::Float64 control_msg;
 std_msgs::Float64 state_msg;
 
 // Diagnostic objects
-double min_input_rate = 1;
-double max_input_rate = 200;
+double min_loop_frequency = 1;
+double max_loop_frequency = 1000;
 int measurements_received = 0;
-
+diagnostic_msgs::DiagnosticStatus diag_status;
 
 class PidControllerDiags
 {
@@ -114,7 +114,7 @@ public:
 };
 
 PidControllerDiags::PidControllerDiags() :
-  fparam(diagnostic_updater::FrequencyStatusParam(&min_input_rate, &max_input_rate)),
+  fparam(diagnostic_updater::FrequencyStatusParam(&min_loop_frequency, &max_loop_frequency)),
   freq_status(fparam)
 {
 }
