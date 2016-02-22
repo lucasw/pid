@@ -2,6 +2,11 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixing header "include" error, possible dynamic_reconfigure errors.
+* Contributors: Andy Zelenak
+
 0.0.10 (2016-1-25)
 ------------------
 * Add diagnostics running at 4Hz. Publish interesting data like setpoint, plant state,
