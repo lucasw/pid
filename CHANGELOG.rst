@@ -2,8 +2,8 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.15 (2016-02-22)
+-------------------
 * Fixing header "include" error, possible dynamic_reconfigure errors.
 * Contributors: Andy Zelenak
 
