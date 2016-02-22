@@ -33,7 +33,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
 
-#pragma once
+#ifndef CONTROLLER_H
+#define CONTROLLER_H
 
 //#include "pid/plant_msg.h"
 //#include "pid/controller_msg.h"
@@ -120,3 +121,5 @@ PidControllerDiags::PidControllerDiags() :
 }
 
 PidControllerDiags *diags;
+
+#endif
