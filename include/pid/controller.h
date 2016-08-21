@@ -94,6 +94,7 @@ ros::Publisher control_effort_pub;
 std::string topic_from_controller;
 std::string topic_from_plant;
 std::string setpoint_topic;
+std::string pid_enable_topic;
 std::string node_name = "pid_node";
 
 std_msgs::Float64 control_msg;
