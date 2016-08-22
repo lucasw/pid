@@ -269,6 +269,7 @@ int main(int argc, char **argv)
   node_priv.param<std::string>("topic_from_controller", topic_from_controller, "control_effort");
   node_priv.param<std::string>("topic_from_plant", topic_from_plant, "state");
   node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
+  node_priv.param<std::string>("pid_enable_topic", pid_enable_topic, "pid_enable");
   node_priv.param<double>("max_loop_frequency", max_loop_frequency, 1.0);
   node_priv.param<double>("min_loop_frequency", min_loop_frequency, 1000.0);
 
@@ -284,7 +285,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber sub = node.subscribe(topic_from_plant, 1, plant_state_callback );
   ros::Subscriber setpoint_sub = node.subscribe(setpoint_topic, 1, setpoint_callback );
-  ros::Subscriber pid_enabled_sub = node.subscribe("pid_enable", 1, pid_enable_callback );
+  ros::Subscriber pid_enabled_sub = node.subscribe(pid_enable_topic, 1, pid_enable_callback );
 
   // configure dynamic reconfiguration
   dynamic_reconfigure::Server<pid::PidConfig> config_server;
