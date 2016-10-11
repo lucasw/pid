@@ -69,10 +69,10 @@ add_executable(plant_sim src/plant_sim.cpp)
 add_executable(setpoint_node src/setpoint_node.cpp)
 add_executable(sim_time src/sim_time.cpp)
 
-add_dependencies(controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater ${PROJECT_NAME}_gencfg)
-add_dependencies(plant_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
-add_dependencies(setpoint_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
-add_dependencies(sim_time ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure diagnostic_updater)
+add_dependencies(controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} dynamic_reconfigure ${PROJECT_NAME}_gencfg)
+add_dependencies(plant_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(setpoint_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(sim_time ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes

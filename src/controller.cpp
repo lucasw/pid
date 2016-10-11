@@ -173,12 +173,40 @@ void pid_enable_callback(const std_msgs::Bool& pid_enable_msg)
   pid_enabled = pid_enable_msg.data;
 }
 
+void get_params(double in, double &value, double &scale)
+{
+  int digits = 0;
+  value = in;
+  while((fabs(value) > 1.0 || fabs(value) < 0.1) && (digits < 2 && digits > -1))
+  {
+    if(fabs(value) > 1.0)
+    {
+      value /= 10.0;
+      digits++;
+    }
+    else
+    {
+      value *= 10.0;
+      digits--;
+    }
+  }
+  if(value > 1.0)
+    value = 1.0;
+  if(value < -1.0)
+    value = -1.0;
+
+  scale = pow(10.0,digits);
+}
+
 bool first_reconfig = true;
 
 void reconfigure_callback(pid::PidConfig &config, uint32_t level)
 {
   if (first_reconfig)
   {
+    get_params(Kp, config.Kp, config.Kp_scale);
+    get_params(Ki, config.Ki, config.Ki_scale);
+    get_params(Kd, config.Kd, config.Kd_scale);
     first_reconfig = false;
     return;     // Ignore the first call to reconfigure which happens at startup
   }
