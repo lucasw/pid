@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>pid</name>
-  <version>0.0.17</version>
+  <version>0.0.18</version>
   <description>Launch a PID control node.</description>
 
   <maintainer email="andyz@utexas.edu">Andy Zelenak</maintainer>
