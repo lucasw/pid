@@ -23,6 +23,7 @@
       <rosparam command="load" file="$(find pid)/config/pid_diags.yaml" />
    </node>
 
+    <!-- rqt_plot is a resource hog, so if you're seeing high CPU usage, don't launch rqt_plot  -->
     <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot"
     args="/control_effort/data /state/data /setpoint/data" />
 
