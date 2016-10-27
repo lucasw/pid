@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
 	  
 	  // Now calculate the period of oscillation (Tu)
 	  //ROS_INFO_STREAM( "to[0]:  " << autotune::oscillationTimes.at(0) << "  to[1]:  " << autotune::oscillationTimes.at(1));
-	  autotune::Tu = autotune::oscillationTimes.at(1) - autotune::oscillationTimes.at(0);
+	  autotune::Tu = 2*(autotune::oscillationTimes.at(1) - autotune::oscillationTimes.at(0));
 	  ROS_INFO_STREAM( "Tu (oscillation period): " << autotune::Tu );
 	  
 	  // Now calculate the other parameters with ZN method
