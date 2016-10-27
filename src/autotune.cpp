@@ -54,6 +54,7 @@ void setKiKdToZero();
 void setKp(double Kp);
 void setpoint_callback(const std_msgs::Float64& setpoint_msg);
 void state_callback(const std_msgs::Float64& state_msg);
+void setFinalParams();
 
 namespace autotune
 {
@@ -87,7 +88,7 @@ int main(int argc, char** argv) {
   // Define how rapidly the value of Kp is varied, and the max/min values to try
   double Kp_max = 10.;
   double Kp_min = 0.5;
-  double Kp_step = .5;
+  double Kp_step = 1.0;
     
   for (double Kp = Kp_min; Kp <= Kp_max; Kp += Kp_step)
   {
@@ -150,35 +151,7 @@ DONE:
 
   if (autotune::foundKu == true)
   {
-    ROS_INFO_STREAM(" ");
-    ROS_INFO_STREAM("The suggested parameters are: ");
-    ROS_INFO_STREAM("Kp  "<< autotune::Kp_ZN);
-    ROS_INFO_STREAM("Ki  "<< autotune::Ki_ZN);
-    ROS_INFO_STREAM("Kd  "<< autotune::Kd_ZN);
-    
-    // Set the ZN parameters with dynamic_reconfigure
-    dynamic_reconfigure::ReconfigureRequest srv_req;
-    dynamic_reconfigure::ReconfigureResponse srv_resp;
-    dynamic_reconfigure::DoubleParameter double_param;
-    dynamic_reconfigure::Config config;
-  
-    // A blank service call to get the current parameters into srv_resp
-    ros::service::call(autotune::nameSpc + "set_parameters", srv_req, srv_resp);
-  
-    double_param.name = "Kp";
-    double_param.value = autotune::Kp_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
-    config.doubles.push_back(double_param);
-    
-    double_param.name = "Ki";
-    double_param.value = autotune::Ki_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
-    config.doubles.push_back(double_param);
-    
-    double_param.name = "Kd";
-    double_param.value = autotune::Kd_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
-    config.doubles.push_back(double_param);
-    
-    srv_req.config = config;
-    ros::service::call(autotune::nameSpc + "set_parameters", srv_req, srv_resp);
+    setFinalParams();
   }
   else
     ROS_INFO_STREAM("Did not see any oscillations for this range of Kp. Adjust Kp_max and Kp_min to broaden the search.");
@@ -231,4 +204,38 @@ void state_callback(const std_msgs::Float64& state_msg)
 {
   autotune::state = state_msg.data;
   //ROS_INFO_STREAM(autotune::state);
+}
+
+// Print out and set the final parameters as calculated by the autotuner
+void setFinalParams()
+{
+    ROS_INFO_STREAM(" ");
+    ROS_INFO_STREAM("The suggested parameters are: ");
+    ROS_INFO_STREAM("Kp  "<< autotune::Kp_ZN);
+    ROS_INFO_STREAM("Ki  "<< autotune::Ki_ZN);
+    ROS_INFO_STREAM("Kd  "<< autotune::Kd_ZN);
+    
+    // Set the ZN parameters with dynamic_reconfigure
+    dynamic_reconfigure::ReconfigureRequest srv_req;
+    dynamic_reconfigure::ReconfigureResponse srv_resp;
+    dynamic_reconfigure::DoubleParameter double_param;
+    dynamic_reconfigure::Config config;
+  
+    // A blank service call to get the current parameters into srv_resp
+    ros::service::call(autotune::nameSpc + "set_parameters", srv_req, srv_resp);
+  
+    double_param.name = "Kp";
+    double_param.value = autotune::Kp_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
+    config.doubles.push_back(double_param);
+    
+    double_param.name = "Ki";
+    double_param.value = autotune::Ki_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
+    config.doubles.push_back(double_param);
+    
+    double_param.name = "Kd";
+    double_param.value = autotune::Kd_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
+    config.doubles.push_back(double_param);
+    
+    srv_req.config = config;
+    ros::service::call(autotune::nameSpc + "set_parameters", srv_req, srv_resp);
 }
