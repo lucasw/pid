@@ -36,7 +36,7 @@
 // Use the Ziegler Nichols Method to calculate reasonable PID gains.
 // The ZN Method is based on setting Ki & Kd to zero, then cranking up Kp until
 // oscillations are observed.
-// This node varies Kp through the range of -10 to 10 until oscillations are just barely observed,
+// This node varies Kp through a range until oscillations are just barely observed,
 // then calculates the other parameters automatically.
 // See https://en.wikipedia.org/wiki/PID_controller
 
@@ -62,6 +62,14 @@ namespace autotune
  double setpoint = 0.;
  double state = 0.;
  std::string nameSpc = "/left_wheel_pid/";
+ int oscillationCount = 0;
+ int numLoops = 100; // Will look for oscillations for numLoops*loopRate
+ int initialError = 0;
+ double Kp_ZN = 0.;
+ double Ki_ZN = 0.;
+ double Kd_ZN = 0.;
+ bool foundKu = false;
+ std::vector<double> oscillationTimes(2); // Used to calculate Tu, the oscillation period
 }
 
 int main(int argc, char** argv) {
@@ -71,57 +79,109 @@ int main(int argc, char** argv) {
   ros::start();
   ros::Subscriber setpoint_sub = autotuneNode.subscribe("/setpoint", 1, setpoint_callback );
   ros::Subscriber state_sub = autotuneNode.subscribe("/state", 1, state_callback );
-  ros::Rate loopRate(1000); // Collect data on the performance of each parameter set for X ms
+  ros::Rate loopRate(50);
   
   // Set Ki and Kd to zero for the ZN method with dynamic_reconfigure
   setKiKdToZero();
 
   // Define how rapidly the value of Kp is varied, and the max/min values to try
   double Kp_max = 10.;
-  double Kp_min = 0.;
+  double Kp_min = 0.5;
   double Kp_step = .5;
     
   for (double Kp = Kp_min; Kp <= Kp_max; Kp += Kp_step)
   {
+    //////////////////////
     // Get the error sign.
+    //////////////////////
     // Need to wait for new setpoint/state msgs
     ros::topic::waitForMessage<std_msgs::Float64>("setpoint");
     ros::topic::waitForMessage<std_msgs::Float64>("state");
-    double errorSign = (autotune::setpoint - autotune::state) / fabs(autotune::setpoint - autotune::state); //Sign of the error
     
     // Try a new Kp.
     setKp(Kp);
+    ROS_INFO_STREAM("Trying Kp = " << Kp); // Blank line on terminal
+    autotune::oscillationCount = 0; // Reset to look for oscillations again
     
-    ros::spinOnce();
-    loopRate.sleep();
-     
-    // Did the system oscillate about the setpoint? If so, Kp~Ku.
-    // It oscillates if the sign of the error changes
-    // Get a fresh state message (assume the setpoint remains the same... nearly always true)
-    ros::topic::waitForMessage<std_msgs::Float64>("state");
-    double newErrorSign = (autotune::setpoint - autotune::state) / fabs(autotune::setpoint - autotune::state); //Sign of the error
-    if ( errorSign != newErrorSign )
+    for (int i=0; i<autotune::numLoops; i++) // Collect data for loopRate*numLoops seconds
     {
-      ROS_INFO_STREAM("Oscillation occurred");
-      //autotune::Ku = Kp;
+      ros::spinOnce();
+      loopRate.sleep();
+      if (i == 0) // Get the sign of the initial error
+      {
+	    autotune::initialError = (autotune::setpoint - autotune::state);
+      }
+     
+      // Did the system oscillate about the setpoint? If so, Kp~Ku.
+      // Oscillation => the sign of the error changes
+      // The first oscillation is caused by the change in setpoint. Ignore it. Look for 2 oscillations.
+      // Get a fresh state message
+      ros::topic::waitForMessage<std_msgs::Float64>("state");
+      double newError = (autotune::setpoint - autotune::state); //Sign of the error
+      //ROS_INFO_STREAM("New error: "<< newError);
+      if ( std::signbit(autotune::initialError) != std::signbit(newError) )
+      {
+	autotune::oscillationTimes.at(autotune::oscillationCount) = loopRate.expectedCycleTime().toSec()*i; // Record the time to calculate a period, Tu
+	autotune::oscillationCount++;
+	ROS_INFO_STREAM("Oscillation occurred. Oscillation count:  " << autotune::oscillationCount);
+	autotune::initialError = newError; // Reset to look for another oscillation
 	    
-      // Now calculate the period of oscillation (Tu)
-      //autotune::Tu = 1.0;
-      
-      //goto FOUND_KU;
+	if (autotune::oscillationCount > 1) // The system is definitely oscillating about the setpoint
+	{
+	  autotune::Ku = Kp;
+	  
+	  // Now calculate the period of oscillation (Tu)
+	  //ROS_INFO_STREAM( "to[0]:  " << autotune::oscillationTimes.at(0) << "  to[1]:  " << autotune::oscillationTimes.at(1));
+	  autotune::Tu = autotune::oscillationTimes.at(1) - autotune::oscillationTimes.at(0);
+	  ROS_INFO_STREAM( "Tu (oscillation period): " << autotune::Tu );
+	  
+	  // Now calculate the other parameters with ZN method
+	  autotune::Kp_ZN = 0.6*autotune::Ku;
+	  autotune::Ki_ZN = 1.2*autotune::Ku/autotune::Tu;
+	  autotune::Kd_ZN = 3.*autotune::Ku*autotune::Tu/40.;
+	  
+	  autotune::foundKu = true;
+	  goto DONE;
+	}
+      }
     }
   }
+DONE:
+
+  if (autotune::foundKu == true)
+  {
+    ROS_INFO_STREAM(" ");
+    ROS_INFO_STREAM("The suggested parameters are: ");
+    ROS_INFO_STREAM("Kp  "<< autotune::Kp_ZN);
+    ROS_INFO_STREAM("Ki  "<< autotune::Ki_ZN);
+    ROS_INFO_STREAM("Kd  "<< autotune::Kd_ZN);
+    
+    // Set the ZN parameters with dynamic_reconfigure
+    dynamic_reconfigure::ReconfigureRequest srv_req;
+    dynamic_reconfigure::ReconfigureResponse srv_resp;
+    dynamic_reconfigure::DoubleParameter double_param;
+    dynamic_reconfigure::Config config;
   
-FOUND_KU:
-  // Now that Ku is known, the other parameters can be calculated
-  double Kp_ZN = 0.6*autotune::Ku;
-  double Ki_ZN = 1.2*autotune::Ku/autotune::Tu;
-  double Kd_ZN = 3.*autotune::Ku*autotune::Tu/40.;
+    // A blank service call to get the current parameters into srv_resp
+    ros::service::call(autotune::nameSpc + "set_parameters", srv_req, srv_resp);
   
-  ROS_INFO_STREAM("The suggested parameters are: ");
-  ROS_INFO_STREAM("Kp  "<< Kp_ZN);
-  ROS_INFO_STREAM("Ki  "<< Ki_ZN);
-  ROS_INFO_STREAM("Kd  "<< Kd_ZN);
+    double_param.name = "Kp";
+    double_param.value = autotune::Kp_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
+    config.doubles.push_back(double_param);
+    
+    double_param.name = "Ki";
+    double_param.value = autotune::Ki_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
+    config.doubles.push_back(double_param);
+    
+    double_param.name = "Kd";
+    double_param.value = autotune::Kd_ZN / srv_resp.config.doubles.at(0).value; // Adjust for the scale slider on the GUI
+    config.doubles.push_back(double_param);
+    
+    srv_req.config = config;
+    ros::service::call(autotune::nameSpc + "set_parameters", srv_req, srv_resp);
+  }
+  else
+    ROS_INFO_STREAM("Did not see any oscillations for this range of Kp. Adjust Kp_max and Kp_min to broaden the search.");
 
   ros::shutdown();
   return 0;
@@ -170,4 +230,5 @@ void setpoint_callback(const std_msgs::Float64& setpoint_msg)
 void state_callback(const std_msgs::Float64& state_msg)
 {
   autotune::state = state_msg.data;
+  //ROS_INFO_STREAM(autotune::state);
 }
