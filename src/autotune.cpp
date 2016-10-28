@@ -70,7 +70,7 @@ namespace autotune
  double Ki_ZN = 0.;
  double Kd_ZN = 0.;
  bool foundKu = false;
- std::vector<double> oscillationTimes(2); // Used to calculate Tu, the oscillation period
+ std::vector<double> oscillationTimes(3); // Used to calculate Tu, the oscillation period
 }
 
 int main(int argc, char** argv) {
@@ -126,23 +126,31 @@ int main(int argc, char** argv) {
 	autotune::oscillationCount++;
 	ROS_INFO_STREAM("Oscillation occurred. Oscillation count:  " << autotune::oscillationCount);
 	autotune::initialError = newError; // Reset to look for another oscillation
-	    
-	if (autotune::oscillationCount > 1) // The system is definitely oscillating about the setpoint
+	
+	// If the system is definitely oscillating about the setpoint
+	if ( autotune::oscillationCount > 2 )
 	{
-	  autotune::Ku = Kp;
-	  
 	  // Now calculate the period of oscillation (Tu)
-	  //ROS_INFO_STREAM( "to[0]:  " << autotune::oscillationTimes.at(0) << "  to[1]:  " << autotune::oscillationTimes.at(1));
-	  autotune::Tu = 2*(autotune::oscillationTimes.at(1) - autotune::oscillationTimes.at(0));
+	  autotune::Tu = autotune::oscillationTimes.at(2) - autotune::oscillationTimes.at(0);
 	  ROS_INFO_STREAM( "Tu (oscillation period): " << autotune::Tu );
+	  //ROS_INFO_STREAM( "2*sampling period: " << 2.*loopRate.expectedCycleTime().toSec() );
 	  
-	  // Now calculate the other parameters with ZN method
-	  autotune::Kp_ZN = 0.6*autotune::Ku;
-	  autotune::Ki_ZN = 1.2*autotune::Ku/autotune::Tu;
-	  autotune::Kd_ZN = 3.*autotune::Ku*autotune::Tu/40.;
+	  // We're looking for more than just the briefest dip across the setpoint and back.
+	  // Want to see significant oscillation
+	  if ( autotune::Tu > 3.*loopRate.expectedCycleTime().toSec() )
+	  {
+	    autotune::Ku = Kp;
+	  	  
+	    // Now calculate the other parameters with ZN method
+	    autotune::Kp_ZN = 0.6*autotune::Ku;
+	    autotune::Ki_ZN = 1.2*autotune::Ku/autotune::Tu;
+	    autotune::Kd_ZN = 3.*autotune::Ku*autotune::Tu/40.;
 	  
-	  autotune::foundKu = true;
-	  goto DONE;
+	    autotune::foundKu = true;
+	    goto DONE;
+	  }
+	  else
+	    break; // Try the next Kp
 	}
       }
     }
