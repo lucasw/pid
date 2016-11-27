@@ -66,6 +66,10 @@ double derivative = 0.;           // derivative term of output
 
 double Kp, Ki, Kd;   // PID loop parameters
 
+// Parameters for error calc. with disconinuous input
+bool angle_error=false;
+double angle_wrap = 2.0*3.14159;
+
 // Cutoff frequency for the derivative calculation in Hz.
 // Negative -> Has not been set by the user yet, so use a default.
 double cutoff_frequency = -1; 
