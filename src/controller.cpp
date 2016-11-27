@@ -62,6 +62,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   error.at(0) = setpoint - plant_state; // Current error goes to slot 0
 
   // If the angle_error param is true, then address discontinuity in error calc.
+  // This maintains an angle between -180:180.
   if (angle_error)
     {
       while (error.at(0) < -1.0*angle_wrap/2.0)
