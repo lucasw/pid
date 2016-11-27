@@ -61,6 +61,19 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   error.at(1) = error.at(0);
   error.at(0) = setpoint - plant_state; // Current error goes to slot 0
 
+  // If the angle_error param is true, then address discontinuity in error calc.
+  if (angle_error)
+    {
+      while (error.at(0) < -1.0*angle_wrap/2.0)
+	{
+	  error.at(0) += angle_wrap;
+	}
+      while (error.at(0) > angle_wrap/2.0)
+	{
+	  error.at(0) -= angle_wrap;
+	}
+    }
+
   // calculate delta_t
   if (!prev_time.isZero()) // Not first time through the program  
   {
@@ -300,6 +313,10 @@ int main(int argc, char **argv)
   node_priv.param<std::string>("pid_enable_topic", pid_enable_topic, "pid_enable");
   node_priv.param<double>("max_loop_frequency", max_loop_frequency, 1.0);
   node_priv.param<double>("min_loop_frequency", min_loop_frequency, 1000.0);
+
+  // Two parameters to allow for error calculation with discontinous value
+  node_priv.param<bool>("angle_error", angle_error, false);
+  node_priv.param<double>("angle_wrap", angle_wrap, 2.0*3.14159);
 
   // Update params if specified as command-line options, & print settings
   print_parameters();
