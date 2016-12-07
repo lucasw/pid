@@ -62,7 +62,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   error.at(0) = setpoint - plant_state; // Current error goes to slot 0
 
   // If the angle_error param is true, then address discontinuity in error calc.
-  // This maintains an angle between -180:180.
+  // For example, this maintains an angular error between -180:180.
   if (angle_error)
     {
       while (error.at(0) < -1.0*angle_wrap/2.0)
@@ -73,6 +73,12 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
 	{
 	  error.at(0) -= angle_wrap;
 	}
+      // The proportional error will flip sign, but the integral error
+      // won't and the derivative error will be poorly defined. So,
+      // reset them.
+      error.at(2) = 0.;
+      error.at(1) = 0.;
+      error_integral = 0.;
     }
 
   // calculate delta_t
