@@ -36,95 +36,90 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-//#include "pid/plant_msg.h"
-//#include "pid/controller_msg.h"
-
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/update_functions.h>
+#include <dynamic_reconfigure/server.h>
+#include <iostream>
+#include "math.h"
+#include <pid/PidConfig.h>
 #include "ros/ros.h"
+#include <ros/time.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
-
-#include "math.h"
 #include <stdio.h>
 #include <string>
-#include <iostream>
 
-// Primary PID controller input & output variables
-double plant_state;                 // current output of plant
-double control_effort;              // output of pid controller
-double setpoint = 0;                // desired output of plant
-bool pid_enabled = true;            // PID is enabled to run
-
-ros::Time prev_time;
-ros::Duration delta_t;
-
-double error_integral = 0.;
-double proportional = 0.;         // proportional term of output
-double integral = 0.;             // integral term of output
-double derivative = 0.;           // derivative term of output
-
-double Kp, Ki, Kd;   // PID loop parameters
-
-// Parameters for error calc. with disconinuous input
-bool angle_error=false;
-double angle_wrap = 2.0*3.14159;
-
-// Cutoff frequency for the derivative calculation in Hz.
-// Negative -> Has not been set by the user yet, so use a default.
-double cutoff_frequency = -1; 
-
-// Used in filter calculations. Default 1.0 corresponds to a cutoff frequency at
-// 1/4 of the sample rate.
-double c=1.;
-
-// Used to check for tan(0)==>NaN in the filter calculation
-double tan_filt = 1.;
-
-// Upper and lower saturation limits
-double upper_limit =  1000.;
-double lower_limit = -1000.; 
-double windup_limit = 1000.; // Anti-windup term. Limits the absolute value of the integral term.
-
-std::vector<double> error(3);
-std::vector<double> filtered_error(3);
-std::vector<double> error_deriv(3);
-std::vector<double> filtered_error_deriv(3);
-int loop_counter = 0; // Counts # of times through the control loop. Used to start taking a derivative after 2 rounds
-
-// Topic and node names and message objects
-ros::Publisher control_effort_pub;
-
-std::string topic_from_controller;
-std::string topic_from_plant;
-std::string setpoint_topic;
-std::string pid_enable_topic;
-std::string node_name = "pid_node";
-
-std_msgs::Float64 control_msg;
-std_msgs::Float64 state_msg;
-
-// Diagnostic objects
-double min_loop_frequency = 1;
-double max_loop_frequency = 1000;
-int measurements_received = 0;
-diagnostic_msgs::DiagnosticStatus diag_status;
-
-class PidControllerDiags
+namespace pid
 {
-public:
-  PidControllerDiags();
-  const diagnostic_updater::FrequencyStatusParam fparam;
-  diagnostic_updater::FrequencyStatus freq_status;
-  diagnostic_updater::Updater diag_updater;
-};
+  // Primary PID controller input & output variables
+  double plant_state;                 // current output of plant
+  double control_effort;              // output of pid controller
+  double setpoint = 0;                // desired output of plant
+  bool pid_enabled = true;            // PID is enabled to run
 
-PidControllerDiags::PidControllerDiags() :
-  fparam(diagnostic_updater::FrequencyStatusParam(&min_loop_frequency, &max_loop_frequency)),
-  freq_status(fparam)
-{
-}
+  ros::Time prev_time;
+  ros::Duration delta_t;
+  bool first_reconfig = true;
 
-PidControllerDiags *diags;
+  double error_integral = 0;
+  double proportional = 0;         // proportional term of output
+  double integral = 0;             // integral term of output
+  double derivative = 0;           // derivative term of output
+
+  // PID gains
+  double Kp = 0, Ki = 0, Kd = 0;
+
+  // Parameters for error calc. with disconinuous input
+  bool angle_error = false;
+  double angle_wrap = 2.0*3.14159;
+
+  // Cutoff frequency for the derivative calculation in Hz.
+  // Negative -> Has not been set by the user yet, so use a default.
+  double cutoff_frequency = -1; 
+
+  // Used in filter calculations. Default 1.0 corresponds to a cutoff frequency at
+  // 1/4 of the sample rate.
+  double c=1.;
+
+  // Used to check for tan(0)==>NaN in the filter calculation
+  double tan_filt = 1.;
+
+  // Upper and lower saturation limits
+  double upper_limit =  1000, lower_limit = -1000;
+
+  // Anti-windup term. Limits the absolute value of the integral term.
+  double windup_limit = 1000;
+
+  // Initialize filter data with zeros
+  std::vector<double> error(3, 0), filtered_error(3, 0), error_deriv(3, 0), filtered_error_deriv(3, 0);
+
+  // Topic and node names and message objects
+  ros::Publisher control_effort_pub;
+
+  std::string topic_from_controller, topic_from_plant, setpoint_topic, pid_enable_topic, node_name = "pid_node";
+
+  std_msgs::Float64 control_msg, state_msg;
+
+  // Diagnostic objects
+  double min_loop_frequency = 1, max_loop_frequency = 1000;
+  int measurements_received = 0;
+  diagnostic_msgs::DiagnosticStatus diag_status;
+
+  class PidControllerDiags
+  {
+  public:
+    PidControllerDiags();
+    const diagnostic_updater::FrequencyStatusParam fparam;
+    diagnostic_updater::FrequencyStatus freq_status;
+    diagnostic_updater::Updater diag_updater;
+  };
+
+  PidControllerDiags::PidControllerDiags() :
+  fparam(diagnostic_updater::FrequencyStatusParam(&min_loop_frequency, &max_loop_frequency)), freq_status(fparam)
+  {
+  }
+
+  PidControllerDiags *diags;
+} // end pid namespace
 
 #endif

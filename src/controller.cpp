@@ -37,10 +37,8 @@
 // stabilize it.
 
 #include <pid/controller.h>
-#include <pid/PidConfig.h>
 
-#include <dynamic_reconfigure/server.h>
-#include <ros/time.h>
+using namespace pid;
 
 void setpoint_callback(const std_msgs::Float64& setpoint_msg)
 {
@@ -137,10 +135,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   filtered_error_deriv.at(2) = filtered_error_deriv.at(1);
   filtered_error_deriv.at(1) = filtered_error_deriv.at(0);
 
-  if ( loop_counter>2 ) // Let some data accumulate
-    filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(c*c-1.414*c+1)*filtered_error_deriv.at(2)-(-2*c*c+2)*filtered_error_deriv.at(1));
-  else
-    loop_counter++;
+  filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(c*c-1.414*c+1)*filtered_error_deriv.at(2)-(-2*c*c+2)*filtered_error_deriv.at(1));
 
   // calculate the control effort
   proportional = Kp * filtered_error.at(0);
@@ -217,8 +212,6 @@ void get_params(double in, double &value, double &scale)
 
   scale = pow(10.0,digits);
 }
-
-bool first_reconfig = true;
 
 void reconfigure_callback(pid::PidConfig &config, uint32_t level)
 {

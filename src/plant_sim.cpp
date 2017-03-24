@@ -41,10 +41,13 @@
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
 
-// Global so it can be passed from the callback fxn to main
-static double control_effort = 0.0;
-static bool reverse_acting = false;
-
+namespace plant_sim
+{
+  // Global so it can be passed from the callback fxn to main
+  static double control_effort = 0.0;
+  static bool reverse_acting = false;
+}
+using namespace plant_sim;
 
 // Callback when something is published on 'control_effort'
 void ControlEffortCallback(const std_msgs::Float64& control_effort_input)
