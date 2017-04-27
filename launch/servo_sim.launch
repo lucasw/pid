@@ -7,7 +7,6 @@
       <param name="lower_limit" value="-10" />
       <param name="windup_limit" value="10" />
       <param name="cutoff_frequency" value="20" />
-      <param name="diagnostic_period" value="0.25" />
       <param name="max_loop_frequency" value="105.0" />
       <param name="min_loop_frequency" value="95.0" />
      </node>
@@ -17,11 +16,6 @@
     </node>
 
     <node name="setpoint_node" pkg="pid" type="setpoint_node" output="screen" />
-
-   <node pkg="diagnostic_aggregator" type="aggregator_node" name="diagnostic_aggregator" >
-      <rosparam command="delete" param="/diagnostic_aggregator" />
-      <rosparam command="load" file="$(find pid)/config/pid_diags.yaml" />
-   </node>
 
     <!-- rqt_plot is a resource hog, so if you're seeing high CPU usage, don't launch rqt_plot  -->
     <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot"

@@ -9,7 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   dynamic_reconfigure
-  diagnostic_updater
 )
 
 generate_dynamic_reconfigure_options(
@@ -42,7 +41,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES pid
-   CATKIN_DEPENDS roscpp std_msgs message_runtime dynamic_reconfigure diagnostic_updater
+   CATKIN_DEPENDS roscpp std_msgs message_runtime dynamic_reconfigure
 #  DEPENDS system_lib
 )
 

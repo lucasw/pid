@@ -1,7 +1,7 @@
 /***************************************************************************//**
 * \file controller.cpp
 *
-* \brief Simple PID controller with dynamic reconfigure and diagnostics
+* \brief Simple PID controller with dynamic reconfigure
 * \author Andy Zelenak
 * \date March 8, 2015
 *
@@ -147,19 +147,10 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   if (control_effort > upper_limit)
   {
     control_effort = upper_limit;
-    diag_status.level = diagnostic_msgs::DiagnosticStatus::WARN;
-    diag_status.message = "Control effort exceeded upper limit";
   }
   else if (control_effort < lower_limit)
   {
     control_effort = lower_limit;
-    diag_status.level = diagnostic_msgs::DiagnosticStatus::WARN;
-    diag_status.message = "Control effort exceeded lower limit";
-  }
-  else
-  {
-    diag_status.level = diagnostic_msgs::DiagnosticStatus::OK;
-    diag_status.message = "PID controller nominal";
   }
 
   // Publish the stabilizing control effort if the controller is enabled
@@ -171,14 +162,7 @@ void plant_state_callback(const std_msgs::Float64& state_msg)
   else
   {
     error_integral = 0.0;
-    diag_status.level = diagnostic_msgs::DiagnosticStatus::ERROR;
-    diag_status.message = "PID controller disabled";
   }
-
-  // update diags
-  ++measurements_received;
-  diags->freq_status.tick();
-  diags->diag_updater.update();
 
   return;
 }
@@ -228,19 +212,6 @@ void reconfigure_callback(pid::PidConfig &config, uint32_t level)
   Ki = config.Ki * config.Ki_scale;
   Kd = config.Kd * config.Kd_scale;
   ROS_INFO("Pid reconfigure request: Kp: %f, Ki: %f, Kd: %f", Kp, Ki, Kd);
-}
-
-void get_pid_diag_status(diagnostic_updater::DiagnosticStatusWrapper& pid_diag_status)
-{
-  pid_diag_status.summary(diag_status);
-  pid_diag_status.add("Setpoint", setpoint);
-  pid_diag_status.add("Plant State", plant_state);
-  pid_diag_status.add("Control Error", error.at(0));
-  pid_diag_status.add("Control output effort", control_effort);
-  pid_diag_status.add("Proportional effort", proportional);
-  pid_diag_status.add("Integral effort", integral);
-  pid_diag_status.add("Derivative effort", derivative);
-  pid_diag_status.add("Measurements received", measurements_received);
 }
 
   ////////////////////////////////////
@@ -337,16 +308,6 @@ int main(int argc, char **argv)
   dynamic_reconfigure::Server<pid::PidConfig>::CallbackType f;
   f = boost::bind(&reconfigure_callback, _1, _2);
   config_server.setCallback(f);
-
-  // initialize diagnostics
-  diags = new PidControllerDiags;
-
-  diag_status.level = diagnostic_msgs::DiagnosticStatus::OK;
-  diag_status.message = "PID status nominal";
-
-  diags->diag_updater.setHardwareID(node_name);
-  diags->diag_updater.add(diags->freq_status);
-  diags->diag_updater.add("PID status", get_pid_diag_status);
 
   // Respond to inputs until shut down
   ros::spin();

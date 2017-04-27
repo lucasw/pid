@@ -1,7 +1,7 @@
 /***************************************************************************//**
 * \file controller.h
 *
-* \brief Simple PID controller with dynamic reconfigure and diagnostics
+* \brief Simple PID controller with dynamic reconfigure
 * \author Andy Zelenak
 * \date March 8, 2015
 *
@@ -36,8 +36,6 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#include <diagnostic_updater/diagnostic_updater.h>
-#include <diagnostic_updater/update_functions.h>
 #include <dynamic_reconfigure/server.h>
 #include <iostream>
 #include "math.h"
@@ -103,23 +101,7 @@ namespace pid
   // Diagnostic objects
   double min_loop_frequency = 1, max_loop_frequency = 1000;
   int measurements_received = 0;
-  diagnostic_msgs::DiagnosticStatus diag_status;
 
-  class PidControllerDiags
-  {
-  public:
-    PidControllerDiags();
-    const diagnostic_updater::FrequencyStatusParam fparam;
-    diagnostic_updater::FrequencyStatus freq_status;
-    diagnostic_updater::Updater diag_updater;
-  };
-
-  PidControllerDiags::PidControllerDiags() :
-  fparam(diagnostic_updater::FrequencyStatusParam(&min_loop_frequency, &max_loop_frequency)), freq_status(fparam)
-  {
-  }
-
-  PidControllerDiags *diags;
 } // end pid namespace
 
 #endif
