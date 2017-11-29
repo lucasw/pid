@@ -309,9 +309,11 @@ int main(int argc, char **argv)
   f = boost::bind(&reconfigure_callback, _1, _2);
   config_server.setCallback(f);
 
-  // Wait for a setpoint
+  // Wait for first messages
   while( !ros::topic::waitForMessage<std_msgs::Float64>(setpoint_topic, ros::Duration(10.)) )
     ROS_WARN_STREAM("Waiting for the setpoint to be published.");
+  while( !ros::topic::waitForMessage<std_msgs::Float64>(topic_from_plant, ros::Duration(10.)) )
+    ROS_WARN_STREAM("Waiting for a msg on the state of the plant.");
 
   // Respond to inputs until shut down
   ros::spin();
