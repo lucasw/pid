@@ -43,128 +43,16 @@ using namespace pid;
 void setpoint_callback(const std_msgs::Float64& setpoint_msg)
 {
   setpoint = setpoint_msg.data;
+
+  new_state_or_setpt = true;
 }
 
 void plant_state_callback(const std_msgs::Float64& state_msg)
 {
 
-  if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
-  {
-    ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
-  }
-
   plant_state = state_msg.data;
 
-  error.at(2) = error.at(1);
-  error.at(1) = error.at(0);
-  error.at(0) = setpoint - plant_state; // Current error goes to slot 0
-
-  // If the angle_error param is true, then address discontinuity in error calc.
-  // For example, this maintains an angular error between -180:180.
-  if (angle_error)
-    {
-      while (error.at(0) < -1.0*angle_wrap/2.0)
-	{
-	  error.at(0) += angle_wrap;
-	}
-      while (error.at(0) > angle_wrap/2.0)
-	{
-	  error.at(0) -= angle_wrap;
-	}
-      // The proportional error will flip sign, but the integral error
-      // won't and the derivative error will be poorly defined. So,
-      // reset them.
-      error.at(2) = 0.;
-      error.at(1) = 0.;
-      error_integral = 0.;
-    }
-
-  // calculate delta_t
-  if (!prev_time.isZero()) // Not first time through the program  
-  {
-    delta_t = ros::Time::now() - prev_time;
-    prev_time = ros::Time::now();
-    if (0 == delta_t.toSec())
-    {
-      ROS_ERROR("delta_t is 0, skipping this loop. Possible overloaded cpu at time: %f", ros::Time::now().toSec());
-      return;
-    }
-  }
-  else
-  {
-    ROS_INFO("prev_time is 0, doing nothing");
-    prev_time = ros::Time::now();
-    return;
-  }
-
-  // integrate the error
-  error_integral += error.at(0) * delta_t.toSec();
-
-  // Apply windup limit to limit the size of the integral term
-  if ( error_integral > fabsf(windup_limit))
-    error_integral = fabsf(windup_limit);
-
-  if ( error_integral < -fabsf(windup_limit))
-    error_integral = -fabsf(windup_limit);
-
-  // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
-  if (cutoff_frequency != -1)
-  {
-    // Check if tan(_) is really small, could cause c = NaN
-    tan_filt = tan( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
-
-    // Avoid tan(0) ==> NaN
-    if ( (tan_filt<=0.) && (tan_filt>-0.01) )
-      tan_filt = -0.01;
-    if ( (tan_filt>=0.) && (tan_filt<0.01) )
-      tan_filt = 0.01;
-
-    c = 1/tan_filt;
-  }
- 
-  filtered_error.at(2) = filtered_error.at(1);
-  filtered_error.at(1) = filtered_error.at(0); 
-  filtered_error.at(0) = (1/(1+c*c+1.414*c))*(error.at(2)+2*error.at(1)+error.at(0)-(c*c-1.414*c+1)*filtered_error.at(2)-(-2*c*c+2)*filtered_error.at(1));
-
-  // Take derivative of error
-  // First the raw, unfiltered data:
-  error_deriv.at(2) = error_deriv.at(1);
-  error_deriv.at(1) = error_deriv.at(0);
-  error_deriv.at(0) = (error.at(0)-error.at(1))/delta_t.toSec();
-
-  filtered_error_deriv.at(2) = filtered_error_deriv.at(1);
-  filtered_error_deriv.at(1) = filtered_error_deriv.at(0);
-
-  filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(c*c-1.414*c+1)*filtered_error_deriv.at(2)-(-2*c*c+2)*filtered_error_deriv.at(1));
-
-  // calculate the control effort
-  proportional = Kp * filtered_error.at(0);
-  integral = Ki * error_integral;
-  derivative = Kd * filtered_error_deriv.at(0);
-  control_effort = proportional + integral + derivative;
-
-  // Apply saturation limits
-  if (control_effort > upper_limit)
-  {
-    control_effort = upper_limit;
-  }
-  else if (control_effort < lower_limit)
-  {
-    control_effort = lower_limit;
-  }
-
-  // Publish the stabilizing control effort if the controller is enabled
-  if (pid_enabled)
-  {
-    control_msg.data = control_effort;
-    control_effort_pub.publish(control_msg);
-  }
-  else
-  {
-    error_integral = 0.0;
-  }
-
-  return;
+  new_state_or_setpt = true;
 }
 
 void pid_enable_callback(const std_msgs::Bool& pid_enable_msg)
@@ -214,10 +102,6 @@ void reconfigure_callback(pid::PidConfig &config, uint32_t level)
   ROS_INFO("Pid reconfigure request: Kp: %f, Ki: %f, Kd: %f", Kp, Ki, Kd);
 }
 
-  ////////////////////////////////////
-  // Error checking
-  ////////////////////////////////////
-
 bool validate_parameters()
 {
   if ( lower_limit > upper_limit )
@@ -229,9 +113,6 @@ bool validate_parameters()
   return true;;
 }
 
-  ////////////////////////////////////
-  // Display parameters
-  ////////////////////////////////////
 void print_parameters()
 {
   std::cout<< std::endl<<"PID PARAMETERS"<<std::endl<<"-----------------------------------------"<<std::endl;
@@ -251,6 +132,118 @@ void print_parameters()
   return;
 }
 
+void do_calcs()
+{
+  // Do fresh calcs if knowledge of the system has changed.
+  if (new_state_or_setpt)
+  {
+    if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
+      ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
+
+    error.at(2) = error.at(1);
+    error.at(1) = error.at(0);
+    error.at(0) = setpoint - plant_state; // Current error goes to slot 0
+
+    // If the angle_error param is true, then address discontinuity in error calc.
+    // For example, this maintains an angular error between -180:180.
+    if (angle_error)
+    {
+      while (error.at(0) < -1.0*angle_wrap/2.0)
+        error.at(0) += angle_wrap;
+      while (error.at(0) > angle_wrap/2.0)
+        error.at(0) -= angle_wrap;
+
+      // The proportional error will flip sign, but the integral error
+      // won't and the derivative error will be poorly defined. So,
+      // reset them.
+      error.at(2) = 0.;
+      error.at(1) = 0.;
+      error_integral = 0.;
+    }
+
+    // calculate delta_t
+    if (!prev_time.isZero()) // Not first time through the program  
+    {
+      delta_t = ros::Time::now() - prev_time;
+      prev_time = ros::Time::now();
+      if (0 == delta_t.toSec())
+      {
+        ROS_ERROR("delta_t is 0, skipping this loop. Possible overloaded cpu at time: %f", ros::Time::now().toSec());
+        return;
+      }
+    }
+    else
+    {
+      ROS_INFO("prev_time is 0, doing nothing");
+      prev_time = ros::Time::now();
+      return;
+    }
+
+    // integrate the error
+    error_integral += error.at(0) * delta_t.toSec();
+
+    // Apply windup limit to limit the size of the integral term
+    if ( error_integral > fabsf(windup_limit))
+      error_integral = fabsf(windup_limit);
+
+    if ( error_integral < -fabsf(windup_limit))
+      error_integral = -fabsf(windup_limit);
+
+    // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
+    if (cutoff_frequency != -1)
+    {
+      // Check if tan(_) is really small, could cause c = NaN
+      tan_filt = tan( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
+
+      // Avoid tan(0) ==> NaN
+      if ( (tan_filt<=0.) && (tan_filt>-0.01) )
+        tan_filt = -0.01;
+      if ( (tan_filt>=0.) && (tan_filt<0.01) )
+        tan_filt = 0.01;
+
+      c = 1/tan_filt;
+    }
+   
+    filtered_error.at(2) = filtered_error.at(1);
+    filtered_error.at(1) = filtered_error.at(0); 
+    filtered_error.at(0) = (1/(1+c*c+1.414*c))*(error.at(2)+2*error.at(1)+error.at(0)-(c*c-1.414*c+1)*filtered_error.at(2)-(-2*c*c+2)*filtered_error.at(1));
+
+    // Take derivative of error
+    // First the raw, unfiltered data:
+    error_deriv.at(2) = error_deriv.at(1);
+    error_deriv.at(1) = error_deriv.at(0);
+    error_deriv.at(0) = (error.at(0)-error.at(1))/delta_t.toSec();
+
+    filtered_error_deriv.at(2) = filtered_error_deriv.at(1);
+    filtered_error_deriv.at(1) = filtered_error_deriv.at(0);
+
+    filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(c*c-1.414*c+1)*filtered_error_deriv.at(2)-(-2*c*c+2)*filtered_error_deriv.at(1));
+
+    // calculate the control effort
+    proportional = Kp * filtered_error.at(0);
+    integral = Ki * error_integral;
+    derivative = Kd * filtered_error_deriv.at(0);
+    control_effort = proportional + integral + derivative;
+
+    // Apply saturation limits
+    if (control_effort > upper_limit)
+      control_effort = upper_limit;
+    else if (control_effort < lower_limit)
+      control_effort = lower_limit;
+
+    // Publish the stabilizing control effort if the controller is enabled
+    if (pid_enabled)
+    {
+      control_msg.data = control_effort;
+      control_effort_pub.publish(control_msg);
+    }
+    else
+      error_integral = 0.0;
+  }
+
+  new_state_or_setpt = false;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -266,7 +259,7 @@ int main(int argc, char **argv)
 
   while (ros::Time(0) == ros::Time::now())
   {
-    ROS_INFO("controller spinning waiting for time to become non-zero");
+    ROS_INFO("controller spinning, waiting for time to become non-zero");
     sleep(1);
   }
 
@@ -309,15 +302,15 @@ int main(int argc, char **argv)
   f = boost::bind(&reconfigure_callback, _1, _2);
   config_server.setCallback(f);
 
-  // Wait for first messages
-  while( !ros::topic::waitForMessage<std_msgs::Float64>(setpoint_topic, ros::Duration(10.)) )
-    ROS_WARN_STREAM("Waiting for the setpoint to be published.");
-  while( !ros::topic::waitForMessage<std_msgs::Float64>(topic_from_plant, ros::Duration(10.)) )
-    ROS_WARN_STREAM("Waiting for a msg on the state of the plant.");
-
   // Respond to inputs until shut down
-  ros::spin();
+  while ( ros::ok() )
+  {
+    do_calcs();
+    ros::spinOnce();
+
+    // Add a small sleep to avoid 100% CPU usage
+    ros::Duration(0.001).sleep();
+  }
 
   return 0;
 }
-

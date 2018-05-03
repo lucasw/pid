@@ -54,6 +54,7 @@ namespace pid
   double control_effort;              // output of pid controller
   double setpoint = 0;                // desired output of plant
   bool pid_enabled = true;            // PID is enabled to run
+  bool new_state_or_setpt = false;    // Indicate that fresh calculations need to be run 
 
   ros::Time prev_time;
   ros::Duration delta_t;
