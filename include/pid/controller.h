@@ -47,62 +47,77 @@
 #include <stdio.h>
 #include <string>
 
-namespace pid
+namespace pid_ns
 {
-  // Primary PID controller input & output variables
-  double plant_state;                 // current output of plant
-  double control_effort;              // output of pid controller
-  double setpoint = 0;                // desired output of plant
-  bool pid_enabled = true;            // PID is enabled to run
-  bool new_state_or_setpt = false;    // Indicate that fresh calculations need to be run 
+  class pid_object
+  {
+    public:
+      pid_object();
 
-  ros::Time prev_time;
-  ros::Duration delta_t;
-  bool first_reconfig = true;
+    private:
+      void do_calcs();
+    	void get_params(double in, double &value, double &scale);
+    	void pid_enable_callback(const std_msgs::Bool& pid_enable_msg);
+    	void plant_state_callback(const std_msgs::Float64& state_msg);
+      void print_parameters();
+      void reconfigure_callback(pid::PidConfig &config, uint32_t level);
+    	void setpoint_callback(const std_msgs::Float64& setpoint_msg);
+      bool validate_parameters();
 
-  double error_integral = 0;
-  double proportional = 0;         // proportional term of output
-  double integral = 0;             // integral term of output
-  double derivative = 0;           // derivative term of output
+		  // Primary PID controller input & output variables
+		  double plant_state_;                 // current output of plant
+		  double control_effort_=0;            // output of pid controller
+		  double setpoint_ = 0;                // desired output of plant
+		  bool pid_enabled_ = true;            // PID is enabled to run
+		  bool new_state_or_setpt_ = false;    // Indicate that fresh calculations need to be run 
 
-  // PID gains
-  double Kp = 0, Ki = 0, Kd = 0;
+		  ros::Time prev_time_;
+		  ros::Duration delta_t_;
+		  bool first_reconfig_ = true;
 
-  // Parameters for error calc. with disconinuous input
-  bool angle_error = false;
-  double angle_wrap = 2.0*3.14159;
+		  double error_integral_ = 0;
+		  double proportional_ = 0;         // proportional term of output
+		  double integral_ = 0;             // integral term of output
+		  double derivative_ = 0;           // derivative term of output
 
-  // Cutoff frequency for the derivative calculation in Hz.
-  // Negative -> Has not been set by the user yet, so use a default.
-  double cutoff_frequency = -1; 
+		  // PID gains
+		  double Kp_ = 0, Ki_ = 0, Kd_ = 0;
 
-  // Used in filter calculations. Default 1.0 corresponds to a cutoff frequency at
-  // 1/4 of the sample rate.
-  double c=1.;
+		  // Parameters for error calc. with disconinuous input
+		  bool angle_error_ = false;
+		  double angle_wrap_ = 2.0*3.14159;
 
-  // Used to check for tan(0)==>NaN in the filter calculation
-  double tan_filt = 1.;
+		  // Cutoff frequency for the derivative calculation in Hz.
+		  // Negative -> Has not been set by the user yet, so use a default.
+		  double cutoff_frequency_ = -1; 
 
-  // Upper and lower saturation limits
-  double upper_limit =  1000, lower_limit = -1000;
+		  // Used in filter calculations. Default 1.0 corresponds to a cutoff frequency at
+		  // 1/4 of the sample rate.
+		  double c_=1.;
 
-  // Anti-windup term. Limits the absolute value of the integral term.
-  double windup_limit = 1000;
+		  // Used to check for tan(0)==>NaN in the filter calculation
+		  double tan_filt_ = 1.;
 
-  // Initialize filter data with zeros
-  std::vector<double> error(3, 0), filtered_error(3, 0), error_deriv(3, 0), filtered_error_deriv(3, 0);
+		  // Upper and lower saturation limits
+		  double upper_limit_ =  1000, lower_limit_ = -1000;
 
-  // Topic and node names and message objects
-  ros::Publisher control_effort_pub;
+		  // Anti-windup term. Limits the absolute value of the integral term.
+		  double windup_limit_ = 1000;
 
-  std::string topic_from_controller, topic_from_plant, setpoint_topic, pid_enable_topic, node_name = "pid_node";
+		  // Initialize filter data with zeros
+		  std::vector<double> error_, filtered_error_, error_deriv_, filtered_error_deriv_;
 
-  std_msgs::Float64 control_msg, state_msg;
+		  // Topic and node names and message objects
+		  ros::Publisher control_effort_pub_;
 
-  // Diagnostic objects
-  double min_loop_frequency = 1, max_loop_frequency = 1000;
-  int measurements_received = 0;
+		  std::string topic_from_controller_, topic_from_plant_, setpoint_topic_, pid_enable_topic_;
 
+		  std_msgs::Float64 control_msg_, state_msg_;
+
+		  // Diagnostic objects
+		  double min_loop_frequency_ = 1, max_loop_frequency_ = 1000;
+		  int measurements_received_ = 0;
+  };
 } // end pid namespace
 
 #endif

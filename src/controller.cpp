@@ -38,29 +38,102 @@
 
 #include <pid/controller.h>
 
-using namespace pid;
+using namespace pid_ns;
 
-void setpoint_callback(const std_msgs::Float64& setpoint_msg)
+
+int main(int argc, char **argv)
 {
-  setpoint = setpoint_msg.data;
+  ros::init(argc, argv, "controller");
 
-  new_state_or_setpt = true;
+  pid_object my_pid;
+
+  return 0;
 }
 
-void plant_state_callback(const std_msgs::Float64& state_msg)
+pid_object::pid_object():
+  error_(3, 0),
+  filtered_error_(3,0),
+  error_deriv_(3,0),
+  filtered_error_deriv_(3,0)
 {
+  ros::NodeHandle node;
+  ros::NodeHandle node_priv("~");
 
-  plant_state = state_msg.data;
+  while (ros::Time(0) == ros::Time::now())
+  {
+    ROS_INFO("controller spinning, waiting for time to become non-zero");
+    sleep(1);
+  }
 
-  new_state_or_setpt = true;
+  // Get params if specified in launch file or as params on command-line, set defaults
+  node_priv.param<double>("Kp", Kp_, 1.0);
+  node_priv.param<double>("Ki", Ki_, 0.0);
+  node_priv.param<double>("Kd", Kd_, 0.0);
+  node_priv.param<double>("upper_limit", upper_limit_, 1000.0);
+  node_priv.param<double>("lower_limit", lower_limit_, -1000.0);
+  node_priv.param<double>("windup_limit", windup_limit_, 1000.0);
+  node_priv.param<double>("cutoff_frequency", cutoff_frequency_, -1.0);
+  node_priv.param<std::string>("topic_from_controller", topic_from_controller_, "control_effort");
+  node_priv.param<std::string>("topic_from_plant", topic_from_plant_, "state");
+  node_priv.param<std::string>("setpoint_topic", setpoint_topic_, "setpoint");
+  node_priv.param<std::string>("pid_enable_topic", pid_enable_topic_, "pid_enable");
+  node_priv.param<double>("max_loop_frequency", max_loop_frequency_, 1.0);
+  node_priv.param<double>("min_loop_frequency", min_loop_frequency_, 1000.0);
+
+  // Two parameters to allow for error calculation with discontinous value
+  node_priv.param<bool>("angle_error", angle_error_, false);
+  node_priv.param<double>("angle_wrap", angle_wrap_, 2.0*3.14159);
+
+  // Update params if specified as command-line options, & print settings
+  print_parameters();
+  if (not validate_parameters())
+    std::cout << "Error: invalid parameter\n";
+
+  // instantiate publishers & subscribers
+  control_effort_pub_ = node.advertise<std_msgs::Float64>(topic_from_controller_, 1);
+
+  ros::Subscriber plant_sub_ = node.subscribe(topic_from_plant_, 1, &pid_object::plant_state_callback, this );
+  ros::Subscriber setpoint_sub_ = node.subscribe(setpoint_topic_, 1, &pid_object::setpoint_callback, this );
+  ros::Subscriber pid_enabled_sub_ = node.subscribe(pid_enable_topic_, 1, &pid_object::pid_enable_callback, this );
+
+  // dynamic reconfiguration
+  dynamic_reconfigure::Server<pid::PidConfig> config_server;
+  dynamic_reconfigure::Server<pid::PidConfig>::CallbackType f;
+  f = boost::bind(&pid_object::reconfigure_callback, this, _1, _2);
+  config_server.setCallback(f);
+
+  // Respond to inputs until shut down
+  while ( ros::ok() )
+  {
+    do_calcs();
+    ros::spinOnce();
+
+    // Add a small sleep to avoid 100% CPU usage
+    ros::Duration(0.001).sleep();
+  }
+};
+
+void pid_object::setpoint_callback(const std_msgs::Float64& setpoint_msg)
+{
+  setpoint_ = setpoint_msg.data;
+
+  new_state_or_setpt_ = true;
 }
 
-void pid_enable_callback(const std_msgs::Bool& pid_enable_msg)
+void pid_object::plant_state_callback(const std_msgs::Float64& state_msg)
 {
-  pid_enabled = pid_enable_msg.data;
+
+  plant_state_ = state_msg.data;
+
+  new_state_or_setpt_ = true;
 }
 
-void get_params(double in, double &value, double &scale)
+void pid_object::pid_enable_callback(const std_msgs::Bool& pid_enable_msg)
+{
+  pid_enabled_ = pid_enable_msg.data;
+}
+
+void pid_object::get_params(double in, double &value, double &scale)
 {
   int digits = 0;
   value = in;
@@ -85,88 +158,88 @@ void get_params(double in, double &value, double &scale)
   scale = pow(10.0,digits);
 }
 
-void reconfigure_callback(pid::PidConfig &config, uint32_t level)
+bool pid_object::validate_parameters()
 {
-  if (first_reconfig)
-  {
-    get_params(Kp, config.Kp, config.Kp_scale);
-    get_params(Ki, config.Ki, config.Ki_scale);
-    get_params(Kd, config.Kd, config.Kd_scale);
-    first_reconfig = false;
-    return;     // Ignore the first call to reconfigure which happens at startup
-  }
-
-  Kp = config.Kp * config.Kp_scale;
-  Ki = config.Ki * config.Ki_scale;
-  Kd = config.Kd * config.Kd_scale;
-  ROS_INFO("Pid reconfigure request: Kp: %f, Ki: %f, Kd: %f", Kp, Ki, Kd);
-}
-
-bool validate_parameters()
-{
-  if ( lower_limit > upper_limit )
+  if ( lower_limit_ > upper_limit_ )
   {
     ROS_ERROR("The lower saturation limit cannot be greater than the upper saturation limit.");
     return(false);
   }
 
-  return true;;
+  return true;
 }
 
-void print_parameters()
+void pid_object::print_parameters()
 {
   std::cout<< std::endl<<"PID PARAMETERS"<<std::endl<<"-----------------------------------------"<<std::endl;
-  std::cout << "Kp: " << Kp << ",  Ki: " << Ki << ",  Kd: " << Kd << std::endl;
-  if ( cutoff_frequency== -1) // If the cutoff frequency was not specified by the user
+  std::cout << "Kp: " << Kp_ << ",  Ki: " << Ki_ << ",  Kd: " << Kd_ << std::endl;
+  if ( cutoff_frequency_== -1) // If the cutoff frequency was not specified by the user
     std::cout<<"LPF cutoff frequency: 1/4 of sampling rate"<<std::endl;
   else
-    std::cout<<"LPF cutoff frequency: "<< cutoff_frequency << std::endl;
+    std::cout<<"LPF cutoff frequency: "<< cutoff_frequency_ << std::endl;
   std::cout << "pid node name: " << ros::this_node::getName() << std::endl;
-  std::cout << "Name of topic from controller: " << topic_from_controller << std::endl;
-  std::cout << "Name of topic from the plant: " << topic_from_plant << std::endl;
-  std::cout << "Name of setpoint topic: " << setpoint_topic << std::endl;
-  std::cout << "Integral-windup limit: " << windup_limit << std::endl;
-  std::cout << "Saturation limits: " << upper_limit << "/" << lower_limit << std::endl;
+  std::cout << "Name of topic from controller: " << topic_from_controller_ << std::endl;
+  std::cout << "Name of topic from the plant: " << topic_from_plant_ << std::endl;
+  std::cout << "Name of setpoint topic: " << setpoint_topic_ << std::endl;
+  std::cout << "Integral-windup limit: " << windup_limit_ << std::endl;
+  std::cout << "Saturation limits: " << upper_limit_ << "/" << lower_limit_ << std::endl;
   std::cout << "-----------------------------------------" << std::endl;
 
   return;
 }
 
-void do_calcs()
+void pid_object::reconfigure_callback(pid::PidConfig &config, uint32_t level)
+{
+  if (first_reconfig_)
+  {
+    get_params(Kp_, config.Kp, config.Kp_scale);
+    get_params(Ki_, config.Ki, config.Ki_scale);
+    get_params(Kd_, config.Kd, config.Kd_scale);
+    first_reconfig_ = false;
+    return;     // Ignore the first call to reconfigure which happens at startup
+  }
+
+  Kp_ = config.Kp * config.Kp_scale;
+  Ki_ = config.Ki * config.Ki_scale;
+  Kd_ = config.Kd * config.Kd_scale;
+  ROS_INFO("Pid reconfigure request: Kp: %f, Ki: %f, Kd: %f", Kp_, Ki_, Kd_);
+}
+
+void pid_object::do_calcs()
 {
   // Do fresh calcs if knowledge of the system has changed.
-  if (new_state_or_setpt)
+  if (new_state_or_setpt_)
   {
-    if ( !((Kp<=0. && Ki<=0. && Kd<=0.) || (Kp>=0. && Ki>=0. && Kd>=0.)) ) // All 3 gains should have the same sign
+    if ( !((Kp_<=0. && Ki_<=0. && Kd_<=0.) || (Kp_>=0. && Ki_>=0. && Kd_>=0.)) ) // All 3 gains should have the same sign
       ROS_WARN("All three gains (Kp, Ki, Kd) should have the same sign for stability.");
 
-    error.at(2) = error.at(1);
-    error.at(1) = error.at(0);
-    error.at(0) = setpoint - plant_state; // Current error goes to slot 0
+    error_.at(2) = error_.at(1);
+    error_.at(1) = error_.at(0);
+    error_.at(0) = setpoint_ - plant_state_; // Current error goes to slot 0
 
     // If the angle_error param is true, then address discontinuity in error calc.
     // For example, this maintains an angular error between -180:180.
-    if (angle_error)
+    if (angle_error_)
     {
-      while (error.at(0) < -1.0*angle_wrap/2.0)
-        error.at(0) += angle_wrap;
-      while (error.at(0) > angle_wrap/2.0)
-        error.at(0) -= angle_wrap;
+      while (error_.at(0) < -1.0*angle_wrap_/2.0)
+        error_.at(0) += angle_wrap_;
+      while (error_.at(0) > angle_wrap_/2.0)
+        error_.at(0) -= angle_wrap_;
 
       // The proportional error will flip sign, but the integral error
       // won't and the derivative error will be poorly defined. So,
       // reset them.
-      error.at(2) = 0.;
-      error.at(1) = 0.;
-      error_integral = 0.;
+      error_.at(2) = 0.;
+      error_.at(1) = 0.;
+      error_integral_ = 0.;
     }
 
     // calculate delta_t
-    if (!prev_time.isZero()) // Not first time through the program  
+    if (!prev_time_.isZero()) // Not first time through the program  
     {
-      delta_t = ros::Time::now() - prev_time;
-      prev_time = ros::Time::now();
-      if (0 == delta_t.toSec())
+      delta_t_ = ros::Time::now() - prev_time_;
+      prev_time_ = ros::Time::now();
+      if (0 == delta_t_.toSec())
       {
         ROS_ERROR("delta_t is 0, skipping this loop. Possible overloaded cpu at time: %f", ros::Time::now().toSec());
         return;
@@ -175,142 +248,71 @@ void do_calcs()
     else
     {
       ROS_INFO("prev_time is 0, doing nothing");
-      prev_time = ros::Time::now();
+      prev_time_ = ros::Time::now();
       return;
     }
 
     // integrate the error
-    error_integral += error.at(0) * delta_t.toSec();
+    error_integral_ += error_.at(0) * delta_t_.toSec();
 
     // Apply windup limit to limit the size of the integral term
-    if ( error_integral > fabsf(windup_limit))
-      error_integral = fabsf(windup_limit);
+    if ( error_integral_ > fabsf(windup_limit_))
+      error_integral_ = fabsf(windup_limit_);
 
-    if ( error_integral < -fabsf(windup_limit))
-      error_integral = -fabsf(windup_limit);
+    if ( error_integral_ < -fabsf(windup_limit_))
+      error_integral_ = -fabsf(windup_limit_);
 
     // My filter reference was Julius O. Smith III, Intro. to Digital Filters With Audio Applications.
-    if (cutoff_frequency != -1)
+    if (cutoff_frequency_ != -1)
     {
       // Check if tan(_) is really small, could cause c = NaN
-      tan_filt = tan( (cutoff_frequency*6.2832)*delta_t.toSec()/2 );
+      tan_filt_ = tan( (cutoff_frequency_*6.2832)*delta_t_.toSec()/2 );
 
       // Avoid tan(0) ==> NaN
-      if ( (tan_filt<=0.) && (tan_filt>-0.01) )
-        tan_filt = -0.01;
-      if ( (tan_filt>=0.) && (tan_filt<0.01) )
-        tan_filt = 0.01;
+      if ( (tan_filt_<=0.) && (tan_filt_>-0.01) )
+        tan_filt_ = -0.01;
+      if ( (tan_filt_>=0.) && (tan_filt_<0.01) )
+        tan_filt_ = 0.01;
 
-      c = 1/tan_filt;
+      c_ = 1/tan_filt_;
     }
    
-    filtered_error.at(2) = filtered_error.at(1);
-    filtered_error.at(1) = filtered_error.at(0); 
-    filtered_error.at(0) = (1/(1+c*c+1.414*c))*(error.at(2)+2*error.at(1)+error.at(0)-(c*c-1.414*c+1)*filtered_error.at(2)-(-2*c*c+2)*filtered_error.at(1));
+    filtered_error_.at(2) = filtered_error_.at(1);
+    filtered_error_.at(1) = filtered_error_.at(0); 
+    filtered_error_.at(0) = (1/(1+c_*c_+1.414*c_))*(error_.at(2)+2*error_.at(1)+error_.at(0)-(c_*c_-1.414*c_+1)*filtered_error_.at(2)-(-2*c_*c_+2)*filtered_error_.at(1));
 
     // Take derivative of error
     // First the raw, unfiltered data:
-    error_deriv.at(2) = error_deriv.at(1);
-    error_deriv.at(1) = error_deriv.at(0);
-    error_deriv.at(0) = (error.at(0)-error.at(1))/delta_t.toSec();
+    error_deriv_.at(2) = error_deriv_.at(1);
+    error_deriv_.at(1) = error_deriv_.at(0);
+    error_deriv_.at(0) = (error_.at(0)-error_.at(1))/delta_t_.toSec();
 
-    filtered_error_deriv.at(2) = filtered_error_deriv.at(1);
-    filtered_error_deriv.at(1) = filtered_error_deriv.at(0);
+    filtered_error_deriv_.at(2) = filtered_error_deriv_.at(1);
+    filtered_error_deriv_.at(1) = filtered_error_deriv_.at(0);
 
-    filtered_error_deriv.at(0) = (1/(1+c*c+1.414*c))*(error_deriv.at(2)+2*error_deriv.at(1)+error_deriv.at(0)-(c*c-1.414*c+1)*filtered_error_deriv.at(2)-(-2*c*c+2)*filtered_error_deriv.at(1));
+    filtered_error_deriv_.at(0) = (1/(1+c_*c_+1.414*c_))*(error_deriv_.at(2)+2*error_deriv_.at(1)+error_deriv_.at(0)-(c_*c_-1.414*c_+1)*filtered_error_deriv_.at(2)-(-2*c_*c_+2)*filtered_error_deriv_.at(1));
 
     // calculate the control effort
-    proportional = Kp * filtered_error.at(0);
-    integral = Ki * error_integral;
-    derivative = Kd * filtered_error_deriv.at(0);
-    control_effort = proportional + integral + derivative;
+    proportional_ = Kp_ * filtered_error_.at(0);
+    integral_ = Ki_ * error_integral_;
+    derivative_ = Kd_ * filtered_error_deriv_.at(0);
+    control_effort_ = proportional_ + integral_ + derivative_;
 
     // Apply saturation limits
-    if (control_effort > upper_limit)
-      control_effort = upper_limit;
-    else if (control_effort < lower_limit)
-      control_effort = lower_limit;
+    if (control_effort_ > upper_limit_)
+      control_effort_ = upper_limit_;
+    else if (control_effort_ < lower_limit_)
+      control_effort_ = lower_limit_;
 
     // Publish the stabilizing control effort if the controller is enabled
-    if (pid_enabled)
+    if (pid_enabled_)
     {
-      control_msg.data = control_effort;
-      control_effort_pub.publish(control_msg);
+      control_msg_.data = control_effort_;
+      control_effort_pub_.publish(control_msg_);
     }
     else
-      error_integral = 0.0;
+      error_integral_ = 0.0;
   }
 
-  new_state_or_setpt = false;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-// Main
-////////////////////////////////////////////////////////////////////////////////////////
-
-int main(int argc, char **argv)
-{
-  ROS_INFO("Starting pid with node name %s", node_name.c_str());
-
-  // Initialize ROS stuff
-  ros::init(argc, argv, node_name);     // Note node_name can be overidden by launch file
-  ros::NodeHandle node;
-  ros::NodeHandle node_priv("~");
-
-  while (ros::Time(0) == ros::Time::now())
-  {
-    ROS_INFO("controller spinning, waiting for time to become non-zero");
-    sleep(1);
-  }
-
-  // Get params if specified in launch file or as params on command-line, set defaults
-  node_priv.param<double>("Kp", Kp, 1.0);
-  node_priv.param<double>("Ki", Ki, 0.0);
-  node_priv.param<double>("Kd", Kd, 0.0);
-  node_priv.param<double>("upper_limit", upper_limit, 1000.0);
-  node_priv.param<double>("lower_limit", lower_limit, -1000.0);
-  node_priv.param<double>("windup_limit", windup_limit, 1000.0);
-  node_priv.param<double>("cutoff_frequency", cutoff_frequency, -1.0);
-  node_priv.param<std::string>("topic_from_controller", topic_from_controller, "control_effort");
-  node_priv.param<std::string>("topic_from_plant", topic_from_plant, "state");
-  node_priv.param<std::string>("setpoint_topic", setpoint_topic, "setpoint");
-  node_priv.param<std::string>("pid_enable_topic", pid_enable_topic, "pid_enable");
-  node_priv.param<double>("max_loop_frequency", max_loop_frequency, 1.0);
-  node_priv.param<double>("min_loop_frequency", min_loop_frequency, 1000.0);
-
-  // Two parameters to allow for error calculation with discontinous value
-  node_priv.param<bool>("angle_error", angle_error, false);
-  node_priv.param<double>("angle_wrap", angle_wrap, 2.0*3.14159);
-
-  // Update params if specified as command-line options, & print settings
-  print_parameters();
-  if (not validate_parameters())
-  {
-    std::cout << "Error: invalid parameter\n";
-  }
-
-  // instantiate publishers & subscribers
-  control_effort_pub = node.advertise<std_msgs::Float64>(topic_from_controller, 1);
-
-  ros::Subscriber sub = node.subscribe(topic_from_plant, 1, plant_state_callback );
-  ros::Subscriber setpoint_sub = node.subscribe(setpoint_topic, 1, setpoint_callback );
-  ros::Subscriber pid_enabled_sub = node.subscribe(pid_enable_topic, 1, pid_enable_callback );
-
-  // configure dynamic reconfiguration
-  dynamic_reconfigure::Server<pid::PidConfig> config_server;
-  dynamic_reconfigure::Server<pid::PidConfig>::CallbackType f;
-  f = boost::bind(&reconfigure_callback, _1, _2);
-  config_server.setCallback(f);
-
-  // Respond to inputs until shut down
-  while ( ros::ok() )
-  {
-    do_calcs();
-    ros::spinOnce();
-
-    // Add a small sleep to avoid 100% CPU usage
-    ros::Duration(0.001).sleep();
-  }
-
-  return 0;
+  new_state_or_setpt_ = false;
 }
