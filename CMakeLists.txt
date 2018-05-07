@@ -65,7 +65,7 @@ include_directories(include
 
 ## Declare a cpp executable
 
-add_executable(controller src/controller.cpp)
+add_executable(controller src/controller.cpp src/pid.cpp)
 add_executable(plant_sim src/plant_sim.cpp)
 add_executable(setpoint_node src/setpoint_node.cpp)
 add_executable(sim_time src/sim_time.cpp)
