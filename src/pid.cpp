@@ -29,6 +29,7 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
   node_priv.param<std::string>("pid_enable_topic", pid_enable_topic_, "pid_enable");
   node_priv.param<double>("max_loop_frequency", max_loop_frequency_, 1.0);
   node_priv.param<double>("min_loop_frequency", min_loop_frequency_, 1000.0);
+  node_priv.param<std::string>("pid_debug_topic", pid_debug_pub_name_, "pid_debug");
 
   // Two parameters to allow for error calculation with discontinous value
   node_priv.param<bool>("angle_error", angle_error_, false);
@@ -41,6 +42,7 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
 
   // instantiate publishers & subscribers
   control_effort_pub_ = node.advertise<std_msgs::Float64>(topic_from_controller_, 1);
+  pid_debug_pub_ = node.advertise<std_msgs::Float64MultiArray>(pid_debug_pub_name_, 1);
 
   ros::Subscriber plant_sub_ = node.subscribe(topic_from_plant_, 1, &PidObject::plantStateCallback, this);
   ros::Subscriber setpoint_sub_ = node.subscribe(setpoint_topic_, 1, &PidObject::setpointCallback, this);
@@ -270,6 +272,11 @@ void PidObject::doCalcs()
     {
       control_msg_.data = control_effort_;
       control_effort_pub_.publish(control_msg_);
+      // Publish topic with
+      std::vector<double> pid_debug_vect { plant_state_, control_effort_, proportional_, integral_, derivative_};
+      std_msgs::Float64MultiArray pidDebugMsg;
+      pidDebugMsg.data = pid_debug_vect;
+      pid_debug_pub_.publish(pidDebugMsg);
     }
     else
       error_integral_ = 0.0;
