@@ -110,7 +110,6 @@ private:
 
   // Topic and node names and message objects
   ros::Publisher control_effort_pub_;
-
   std::string topic_from_controller_, topic_from_plant_, setpoint_topic_, pid_enable_topic_;
 
   std_msgs::Float64 control_msg_, state_msg_;

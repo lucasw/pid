@@ -44,6 +44,7 @@
 #include <ros/time.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <stdio.h>
 #include <string>
 
@@ -112,9 +113,10 @@ private:
 
   // Topic and node names and message objects
   ros::Publisher control_effort_pub_;
+  ros::Publisher pid_debug_pub_;
 
   std::string topic_from_controller_, topic_from_plant_, setpoint_topic_, pid_enable_topic_;
-
+  std::string pid_debug_pub_name_;
   std_msgs::Float64 control_msg_, state_msg_;
 
   // Diagnostic objects
