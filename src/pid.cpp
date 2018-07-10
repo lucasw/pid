@@ -54,6 +54,10 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
   f = boost::bind(&PidObject::reconfigureCallback, this, _1, _2);
   config_server.setCallback(f);
 
+  // Wait for first messages
+  while( ! (ros::topic::waitForMessage<std_msgs::Float64>(setpoint_topic_, ros::Duration(10.)) && ros::topic::waitForMessage<std_msgs::Float64>(topic_from_plant_, ros::Duration(10.))))
+     ROS_WARN_STREAM("Waiting for first setpoint and state of the plant messages.");
+
   // Respond to inputs until shut down
   while (ros::ok())
   {
