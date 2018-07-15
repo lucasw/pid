@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   ROS_INFO("Starting setpoint publisher");
   ros::NodeHandle setpoint_node;
 
-  while (ros::Time(0) == ros::Time::now())
+  while (ros::ok() && ros::Time(0) == ros::Time::now())
   {
     ROS_INFO("Setpoint_node spinning, waiting for time to become non-zero");
     sleep(1);
