@@ -48,6 +48,13 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
   ros::Subscriber setpoint_sub_ = node.subscribe(setpoint_topic_, 1, &PidObject::setpointCallback, this);
   ros::Subscriber pid_enabled_sub_ = node.subscribe(pid_enable_topic_, 1, &PidObject::pidEnableCallback, this);
 
+  if (!plant_sub_ || !setpoint_sub_ || !pid_enabled_sub_)
+  {
+    ROS_ERROR_STREAM("Initialization of a subscriber failed. Exiting.");
+    ros::shutdown();
+    exit(EXIT_FAILURE);
+  }
+
   // dynamic reconfiguration
   dynamic_reconfigure::Server<pid::PidConfig> config_server;
   dynamic_reconfigure::Server<pid::PidConfig>::CallbackType f;
@@ -95,7 +102,7 @@ void PidObject::getParams(double in, double& value, double& scale)
 {
   int digits = 0;
   value = in;
-  while ((fabs(value) > 1.0 || fabs(value) < 0.1) && (digits < 2 && digits > -1))
+  while (ros::ok() && ((fabs(value) > 1.0 || fabs(value) < 0.1) && (digits < 2 && digits > -1)))
   {
     if (fabs(value) > 1.0)
     {
