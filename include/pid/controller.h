@@ -36,17 +36,6 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#include "math.h"
-#include "ros/ros.h"
-#include <dynamic_reconfigure/server.h>
-#include <iostream>
-#include <pid/PidConfig.h>
-#include <ros/time.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float64.h>
-#include <stdio.h>
-#include <string>
-
 namespace pid_ns
 {
 class PidObject
