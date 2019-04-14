@@ -235,6 +235,7 @@ void PidObject::doCalcs()
 
     // My filter reference was Julius O. Smith III, Intro. to Digital Filters
     // With Audio Applications.
+    // See https://ccrma.stanford.edu/~jos/filters/Example_Second_Order_Butterworth_Lowpass.html
     if (cutoff_frequency_ != -1)
     {
       // Check if tan(_) is really small, could cause c = NaN
