@@ -74,6 +74,7 @@ private:
   double setpoint_ = 0;              // desired output of plant
 
   ros::Time prev_time_;
+  ros::Time last_setpoint_msg_time_;
   ros::Duration delta_t_;
   bool first_reconfig_ = true;
 
@@ -92,6 +93,11 @@ private:
   // Cutoff frequency for the derivative calculation in Hz.
   // Negative -> Has not been set by the user yet, so use a default.
   double cutoff_frequency_ = -1;
+  
+  // Setpoint timeout parameter to determine how long to keep publishing
+  // control_effort messages after last setpoint message
+  // -1 indicates publish indefinately, and positive number sets the timeout
+  double setpoint_timeout_ = -1;
 
   // Used in filter calculations. Default 1.0 corresponds to a cutoff frequency
   // at

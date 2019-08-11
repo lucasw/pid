@@ -9,6 +9,7 @@
       <param name="cutoff_frequency" value="20" />
       <param name="max_loop_frequency" value="105.0" />
       <param name="min_loop_frequency" value="95.0" />
+      <param name="setpoint_timeout" value="-1.0" />
      </node>
 
     <node name="servo_sim_node" pkg="pid" type="plant_sim" output="screen" >
