@@ -30,6 +30,9 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
   node_priv.param<double>("max_loop_frequency", max_loop_frequency_, 1.0);
   node_priv.param<double>("min_loop_frequency", min_loop_frequency_, 1000.0);
   node_priv.param<std::string>("pid_debug_topic", pid_debug_pub_name_, "pid_debug");
+  node_priv.param<double>("setpoint_timeout", setpoint_timeout_, -1.0);
+  ROS_ASSERT_MSG(setpoint_timeout_ ==-1 || setpoint_timeout_ > 0, 
+                 "setpoint_timeout set to %.2f but needs to -1 or >0", setpoint_timeout_);
 
   // Two parameters to allow for error calculation with discontinous value
   node_priv.param<bool>("angle_error", angle_error_, false);
@@ -82,7 +85,7 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
 void PidObject::setpointCallback(const std_msgs::Float64& setpoint_msg)
 {
   setpoint_ = setpoint_msg.data;
-
+  last_setpoint_msg_time_ = ros::Time::now();
   new_state_or_setpt_ = true;
 }
 
@@ -283,7 +286,8 @@ void PidObject::doCalcs()
       control_effort_ = lower_limit_;
 
     // Publish the stabilizing control effort if the controller is enabled
-    if (pid_enabled_)
+    if (pid_enabled_ && (setpoint_timeout_ == -1 || 
+                         (ros::Time::now() - last_setpoint_msg_time_).toSec() <= setpoint_timeout_))
     {
       control_msg_.data = control_effort_;
       control_effort_pub_.publish(control_msg_);
@@ -293,6 +297,11 @@ void PidObject::doCalcs()
       pidDebugMsg.data = pid_debug_vect;
       pid_debug_pub_.publish(pidDebugMsg);
     }
+    else if (setpoint_timeout_ > 0 && (ros::Time::now() - last_setpoint_msg_time_).toSec() > setpoint_timeout_)
+    {
+      ROS_WARN_ONCE("Setpoint message timed out, will stop publising control_effort_messages");
+      error_integral_ = 0.0;
+    } 
     else
       error_integral_ = 0.0;
   }
