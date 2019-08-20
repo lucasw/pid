@@ -194,16 +194,29 @@ void PidObject::doCalcs()
     if (angle_error_)
     {
       while (error_.at(0) < -1.0 * angle_wrap_ / 2.0)
+      {
         error_.at(0) += angle_wrap_;
+
+        // The proportional error will flip sign, but the integral error
+        // won't and the filtered derivative will be poorly defined. So,
+        // reset them.
+        error_deriv_.at(2) = 0.;
+        error_deriv_.at(1) = 0.;
+        error_deriv_.at(0) = 0.;
+        error_integral_ = 0.;
+      }
       while (error_.at(0) > angle_wrap_ / 2.0)
+      {
         error_.at(0) -= angle_wrap_;
 
-      // The proportional error will flip sign, but the integral error
-      // won't and the derivative error will be poorly defined. So,
-      // reset them.
-      error_.at(2) = 0.;
-      error_.at(1) = 0.;
-      error_integral_ = 0.;
+        // The proportional error will flip sign, but the integral error
+        // won't and the filtered derivative will be poorly defined. So,
+        // reset them.
+        error_deriv_.at(2) = 0.;
+        error_deriv_.at(1) = 0.;
+        error_deriv_.at(0) = 0.;
+        error_integral_ = 0.;
+      }
     }
 
     // calculate delta_t
