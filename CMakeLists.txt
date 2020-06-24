@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   dynamic_reconfigure
 )
+find_package(Boost REQUIRED COMPONENTS system)
 
 generate_dynamic_reconfigure_options(
     cfg/Pid.cfg
@@ -19,6 +20,7 @@ catkin_package(
 
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
   ${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake
 )
 
