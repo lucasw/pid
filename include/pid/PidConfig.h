@@ -8,6 +8,10 @@
 //
 // ********************************************************/
 
+#include <boost/any.hpp>
+#include <dynamic_reconfigure/config_tools.h>
+#include <dynamic_reconfigure/config_init_mutex.h>
+
 #ifndef __pid__PIDCONFIG_H__
 #define __pid__PIDCONFIG_H__
 
