@@ -2,6 +2,18 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix compatibility issues when building with ROS Noetic
+* Bug fix for angle wrapping always resetting filtered and integral error
+* Adding a parameter setpoint_timeout which specifies whether to keep publishing control_effort messages after setpoint messages stop coming in
+* Add link to low-pass filter reference
+* Cleaning up package.xml just a bit more.
+* Removing a bunch of superfluous dependencies.
+* Cleaning CMakeLists.
+* Upgrade to package format=2
+* Contributors: Andrew J Zelenak, AndyZe, Stewart Jamieson, Vikrant Shah
+
 0.0.15 (2016-02-22)
 -------------------
 * Fixing header "include" error, possible dynamic_reconfigure errors.
