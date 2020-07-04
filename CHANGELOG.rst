@@ -2,8 +2,8 @@
 Changelog for package pid
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.28 (2020-07-03)
+-------------------
 * Fix compatibility issues when building with ROS Noetic
 * Bug fix for angle wrapping always resetting filtered and integral error
 * Adding a parameter setpoint_timeout which specifies whether to keep publishing control_effort messages after setpoint messages stop coming in
