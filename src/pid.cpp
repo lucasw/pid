@@ -61,7 +61,7 @@ PidObject::PidObject() : error_(3, 0), filtered_error_(3, 0), error_deriv_(3, 0)
   // dynamic reconfiguration
   dynamic_reconfigure::Server<pid::PidConfig> config_server;
   dynamic_reconfigure::Server<pid::PidConfig>::CallbackType f;
-  f = boost::bind(&PidObject::reconfigureCallback, this, _1, _2);
+  f = boost::bind(&PidObject::reconfigureCallback, this, boost::placeholders::_1, boost::placeholders::_2);
   config_server.setCallback(f);
 
   // Wait for first messages
